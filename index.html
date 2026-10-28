@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sky over Stanford</title>
+<meta name="description" content="Live aircraft over Stanford from public ADS-B receivers: where to look, how old each position is, and what the data can't see.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #1751C6;
+    --text: #0F1E2E;
+    --muted: #4A5C70;
+    --line: #E4EAF1;
+    --bg: #FFFFFF;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.55 Inter, system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1, h2, h3 { font-family: Fraunces, Georgia, serif; font-weight: 600; line-height: 1.2; margin: 0; }
+  h1 { font-size: 34px; margin-bottom: 10px; }
+  h2 { font-size: 24px; margin: 40px 0 12px; }
+  h3 { font-size: 20px; margin-bottom: 8px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); }
+  .small { font-size: 16px; }
+
+  @media (max-width: 480px) { h1 { font-size: 28px; } main { padding-top: 24px; } }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0 0; }
+  .controls select { flex: 1 1 180px; min-width: 0; }
+  select, button { font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--muted); border-radius: 8px; padding: 8px 12px; min-height: 44px; }
+  button { cursor: pointer; }
+  select:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .seg { display: inline-flex; border: 1px solid var(--muted); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; min-height: 42px; }
+  .seg button + button { border-left: 1px solid var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #FFFFFF; }
+  .check { display: inline-flex; gap: 8px; align-items: center; font-size: 16px; min-height: 44px; }
+  .check input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
+
+  .status { font-size: 16px; color: var(--muted); margin: 4px 0 12px; }
+  .status.error { color: var(--text); }
+  svg#sky { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  svg text { font-family: Inter, system-ui, sans-serif; font-size: 16px; }
+  .legend { font-size: 16px; color: var(--muted); margin-top: 10px; }
+
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
+  .card dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 0; font-size: 16px; }
+  .card dt { color: var(--muted); }
+  .card dd { margin: 0; }
+  .look { font-size: 19px; margin: 4px 0 0; }
+
+  ul.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  ul.list li { border-bottom: 1px solid var(--line); }
+  ul.list button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; padding: 10px 4px; background: var(--bg); }
+  ul.list button[aria-current="true"] .who { color: var(--accent); }
+  .who { font-weight: 600; }
+  .meta { display: block; font-size: 16px; color: var(--muted); }
+
+  .gaps p { margin-bottom: 14px; }
+  .gaps strong { font-weight: 600; }
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">What's flying over Stanford</h1>
+  <p class="muted">Live positions from public ADS-B receivers, refreshed every 10 seconds. Tap a plane to see where to look.</p>
+
+  <div class="controls">
+    <select id="place" aria-label="Where you are"></select>
+    <button id="locate" type="button">My location</button>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="View">
+      <button type="button" data-view="sky" aria-pressed="true">Sky from here</button>
+      <button type="button" data-view="map" aria-pressed="false">Map from above</button>
+    </div>
+    <button id="compass" type="button" hidden>Turn with my phone</button>
+  </div>
+
+  <p id="status" class="status" role="status">Loading live positions.</p>
+  <svg id="sky" role="img" aria-label="Aircraft positions"></svg>
+  <p id="legend" class="legend"></p>
+  <label class="check"><input id="ground" type="checkbox"> Show ground traffic</label>
+
+  <section id="card" class="card" aria-live="polite" hidden></section>
+
+  <h2>Everything in range</h2>
+  <ul id="list" class="list"></ul>
+
+  <section class="gaps">
+    <h2>What this data can't see</h2>
+    <p><strong>Aircraft that don't broadcast.</strong> The FAA requires ADS-B Out in most controlled airspace: Class A, B and C, and Class E at and above 10,000 feet. Outside that airspace, some aircraft fly without it, and they never appear here.</p>
+    <p><strong>Low or hidden aircraft.</strong> This feed comes from volunteer receivers. A receiver needs a line of sight to the aircraft, so low flights behind hills or buildings, and landings at small airports, can drop out.</p>
+    <p><strong>Where a plane is right now.</strong> Every position is a few seconds to about a minute old. In one test the oldest was 45 seconds. This page shows each plane where it was last heard and says how old that is. The dashed circle on the map shows how far it could have flown since.</p>
+    <p><strong>Where it's going.</strong> Planes don't broadcast their route. Flight apps add routes from airline schedules. This page doesn't guess.</p>
+    <p><strong>Who some aircraft are.</strong> Some owners use a temporary privacy address from the FAA's PIA program, so the feed can't match them to a registration or aircraft type.</p>
+    <p><strong>Exactly where to look.</strong> The angles assume a flat, open horizon and ignore trees, hills and buildings. Altitude comes from the aircraft's own instruments, so angles are close, not exact.</p>
+    <p><strong>Exact sound delay.</strong> The delay uses a fixed speed of sound, 340 meters per second. Temperature and wind change it.</p>
+  </section>
+
+  <footer>
+    Aircraft data from <a href="https://www.adsb.lol/">adsb.lol</a>, ODbL 1.0. Airport locations from <a href="https://ourairports.com/">OurAirports</a>. Not for navigation.
+  </footer>
+</main>
+
+<script>
+(() => {
+  const PLACES = [
+    { id: 'stanford', label: 'Stanford Main Quad', title: 'Stanford', lat: 37.4275, lon: -122.1703 },
+    { id: 'KPAO', label: 'Palo Alto Airport (PAO)', title: 'Palo Alto Airport', lat: 37.461102, lon: -122.114998 },
+    { id: 'KSFO', label: 'San Francisco International (SFO)', title: 'SFO', lat: 37.619806, lon: -122.374821 },
+    { id: 'KSJC', label: 'San Jose International (SJC)', title: 'San Jose Airport', lat: 37.362452, lon: -121.929188 },
+  ];
+  // Coordinates from OurAirports.
+  const AIRPORTS = [
+    { code: 'PAO', lat: 37.461102, lon: -122.114998 },
+    { code: 'SFO', lat: 37.619806, lon: -122.374821 },
+    { code: 'SJC', lat: 37.362452, lon: -121.929188 },
+    { code: 'SQL', lat: 37.51313, lon: -122.250838 },
+    { code: 'OAK', lat: 37.720085, lon: -122.221184 },
+    { code: 'NUQ', lat: 37.4161, lon: -122.049004 },
+    { code: 'HWD', lat: 37.659198761, lon: -122.122001648 },
+    { code: 'RHV', lat: 37.332901, lon: -121.819 },
+  ];
+  // ICAO airline prefixes seen around the Bay Area, plus common long-haul carriers.
+  const AIRLINES = {
+    AAL: 'American Airlines', AAR: 'Asiana Airlines', AAY: 'Allegiant Air', ABX: 'ABX Air', ACA: 'Air Canada',
+    AFR: 'Air France', AIC: 'Air India', AMX: 'Aeromexico', ANA: 'All Nippon Airways', ANZ: 'Air New Zealand',
+    ASA: 'Alaska Airlines', ASH: 'Mesa Airlines', BAW: 'British Airways', CAL: 'China Airlines', CCA: 'Air China',
+    CES: 'China Eastern', CKS: 'Kalitta Air', CPA: 'Cathay Pacific', CSN: 'China Southern', DAL: 'Delta Air Lines',
+    DLH: 'Lufthansa', EJA: 'NetJets', ENY: 'Envoy Air', ETD: 'Etihad Airways', EVA: 'EVA Air', FDX: 'FedEx',
+    FFT: 'Frontier Airlines', FIN: 'Finnair', GTI: 'Atlas Air', HAL: 'Hawaiian Airlines', IBE: 'Iberia',
+    JAL: 'Japan Airlines', JBU: 'JetBlue', KAL: 'Korean Air', KLM: 'KLM', NKS: 'Spirit Airlines', PAL: 'Philippine Airlines',
+    QFA: 'Qantas', QTR: 'Qatar Airways', QXE: 'Horizon Air', RPA: 'Republic Airways', SIA: 'Singapore Airlines',
+    SKW: 'SkyWest Airlines', SWA: 'Southwest Airlines', SWR: 'Swiss', THY: 'Turkish Airlines', UAE: 'Emirates',
+    UAL: 'United Airlines', UPS: 'UPS Airlines', VIR: 'Virgin Atlantic', VOI: 'Volaris', WJA: 'WestJet',
+  };
+  // ICAO aircraft type designators.
+  const TYPES = {
+    A19N: 'Airbus A319neo', A20N: 'Airbus A320neo', A21N: 'Airbus A321neo', A319: 'Airbus A319', A320: 'Airbus A320',
+    A321: 'Airbus A321', A332: 'Airbus A330-200', A333: 'Airbus A330-300', A339: 'Airbus A330-900', A359: 'Airbus A350-900',
+    A35K: 'Airbus A350-1000', A388: 'Airbus A380', BCS1: 'Airbus A220-100', BCS3: 'Airbus A220-300',
+    B712: 'Boeing 717', B737: 'Boeing 737-700', B738: 'Boeing 737-800', B739: 'Boeing 737-900', B37M: 'Boeing 737 MAX 7',
+    B38M: 'Boeing 737 MAX 8', B39M: 'Boeing 737 MAX 9', B3XM: 'Boeing 737 MAX 10', B744: 'Boeing 747-400', B748: 'Boeing 747-8',
+    B752: 'Boeing 757-200', B753: 'Boeing 757-300', B763: 'Boeing 767-300', B764: 'Boeing 767-400', B772: 'Boeing 777-200',
+    B77L: 'Boeing 777-200LR or 777F', B77W: 'Boeing 777-300ER', B788: 'Boeing 787-8', B789: 'Boeing 787-9', B78X: 'Boeing 787-10',
+    CRJ2: 'Bombardier CRJ200', CRJ7: 'Bombardier CRJ700', CRJ9: 'Bombardier CRJ900', DH8D: 'De Havilland Dash 8-400',
+    AT76: 'ATR 72-600', E170: 'Embraer 170', E75L: 'Embraer 175', E75S: 'Embraer 175', E190: 'Embraer 190', E290: 'Embraer 190-E2',
+    C152: 'Cessna 152', C172: 'Cessna 172 Skyhawk', C182: 'Cessna 182 Skylane', C208: 'Cessna 208 Caravan',
+    C25A: 'Cessna Citation CJ2', C25B: 'Cessna Citation CJ3', C56X: 'Cessna Citation Excel', C68A: 'Cessna Citation Latitude',
+    C700: 'Cessna Citation Longitude', CL35: 'Bombardier Challenger 350', CL60: 'Bombardier Challenger 600 series',
+    GLF4: 'Gulfstream IV', GLF5: 'Gulfstream V', GLF6: 'Gulfstream G650', GL5T: 'Bombardier Global 5000', GLEX: 'Bombardier Global Express',
+    E50P: 'Embraer Phenom 100', E55P: 'Embraer Phenom 300', PC12: 'Pilatus PC-12', PC24: 'Pilatus PC-24',
+    SR20: 'Cirrus SR20', SR22: 'Cirrus SR22', SF50: 'Cirrus Vision Jet', P28A: 'Piper PA-28', PA46: 'Piper PA-46',
+    BE20: 'Beechcraft King Air 200', BE36: 'Beechcraft Bonanza', DA40: 'Diamond DA40', DA42: 'Diamond DA42',
+    R22: 'Robinson R22', R44: 'Robinson R44', EC35: 'Airbus H135', AS50: 'Airbus AS350', B06: 'Bell 206', B407: 'Bell 407',
+  };
+  // readsb "type" field: how the position reached the receiver network.
+  const SOURCES = {
+    adsb_icao: 'received directly from the aircraft (ADS-B)',
+    adsb_icao_nt: 'ADS-B from a device without a transponder',
+    adsb_other: 'ADS-B with a non-standard address',
+    adsr_icao: 'rebroadcast by an FAA ground station (ADS-R)',
+    adsr_other: 'rebroadcast by an FAA ground station (ADS-R)',
+    tisb_icao: 'FAA radar track, rebroadcast (TIS-B)',
+    tisb_other: 'FAA radar track, rebroadcast (TIS-B)',
+    tisb_trackfile: 'FAA radar track, rebroadcast (TIS-B)',
+    mlat: 'worked out from signal timing at several receivers (MLAT)',
+    adsc: 'satellite report (ADS-C)',
+  };
+
+  const NM = 25;               // query radius, nautical miles
+  const REFRESH_MS = 10000;
+  const STALE_S = 30;
+  const EARTH_M = 6371008.8;
+  const SOUND_MS = 340;
+  const M_PER_MI = 1609.344;
+  const MAP_MI = 28;           // map radius in statute miles (25 nm is about 28.8 mi)
+
+  const $ = (id) => document.getElementById(id);
+  const svg = $('sky');
+  const rad = (d) => d * Math.PI / 180;
+  const deg = (r) => r * 180 / Math.PI;
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+
+  const state = {
+    obs: PLACES[0],
+    view: 'sky',
+    showGround: false,
+    heading: null,           // degrees from north when "Turn with my phone" is on
+    aircraft: [],
+    trails: new Map(),       // hex -> [{lat, lon, t}]
+    selected: null,
+    updatedAt: null,
+    error: '',
+  };
+
+  // ---------- geometry ----------
+  function geo(obs, lat, lon) {
+    const p1 = rad(obs.lat), p2 = rad(lat), dl = rad(lon - obs.lon);
+    const a = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+    const d = 2 * EARTH_M * Math.asin(Math.min(1, Math.sqrt(a)));
+    const brg = (deg(Math.atan2(Math.sin(dl) * Math.cos(p2),
+      Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl))) + 360) % 360;
+    return { d, brg };
+  }
+  function project(lat, lon, brgDeg, distM) {
+    const p1 = rad(lat), l1 = rad(lon), b = rad(brgDeg), dr = distM / EARTH_M;
+    const p2 = Math.asin(Math.sin(p1) * Math.cos(dr) + Math.cos(p1) * Math.sin(dr) * Math.cos(b));
+    const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(dr) * Math.cos(p1), Math.cos(dr) - Math.sin(p1) * Math.sin(p2));
+    return { lat: deg(p2), lon: deg(l2) };
+  }
+  // Elevation angle above a flat horizon, allowing for the Earth's curve. Observer at sea level.
+  function elevation(dM, hM) {
+    const drop = dM * dM / (2 * EARTH_M);
+    return deg(Math.atan2(hM - drop, dM));
+  }
+  function compassWord(b) {
+    const words = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+    return words[Math.round(b / 45) % 8];
+  }
+  function compassShort(b) {
+    return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(b / 45) % 8];
+  }
+
+  // ---------- data ----------
+  function enrich(a, nowMs, fetchedAt) {
+    // Some aircraft on a runway or taxiway report a small altitude instead of "ground".
+    // Treat slow and low as on the ground.
+    const onGround = a.alt_baro === 'ground' ||
+      (typeof a.alt_baro === 'number' && a.alt_baro < 500 && typeof a.gs === 'number' && a.gs < 50);
+    const ft = typeof a.alt_geom === 'number' ? a.alt_geom : (typeof a.alt_baro === 'number' ? a.alt_baro : 0);
+    const { d, brg } = geo(state.obs, a.lat, a.lon);
+    const h = onGround ? 0 : ft * 0.3048;
+    const el = elevation(d, h);
+    const slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
+    const lag = Math.max(0, (fetchedAt - nowMs) / 1000);
+    const age = (a.seen_pos ?? a.seen ?? 0) + lag;
+    return {
+      raw: a, hex: a.hex, onGround, ft, d, brg, el, slant, age,
+      altFt: typeof a.alt_baro === 'number' ? a.alt_baro : null,
+      gs: typeof a.gs === 'number' ? a.gs : null,
+      track: typeof a.track === 'number' ? a.track : (typeof a.true_heading === 'number' ? a.true_heading : null),
+      callsign: (a.flight || '').trim(),
+    };
+  }
+
+  function rememberTrail(a, nowMs) {
+    const t = nowMs - (a.seen_pos ?? 0) * 1000;
+    const list = state.trails.get(a.hex) || [];
+    const last = list[list.length - 1];
+    if (!last || Math.abs(last.t - t) > 500) list.push({ lat: a.lat, lon: a.lon, t });
+    while (list.length > 8) list.shift();
+    state.trails.set(a.hex, list);
+  }
+
+  async function load() {
+    if (load.busy) return;
+    load.busy = true;
+    // Only a rounded location (about 1 km) leaves the browser.
+    const url = `/api/aircraft?lat=${state.obs.lat.toFixed(2)}&lon=${state.obs.lon.toFixed(2)}&nm=${NM}`;
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || `status ${r.status}`);
+      const fetchedAt = Date.now();
+      const withPos = (j.ac || []).filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number');
+      withPos.forEach((a) => rememberTrail(a, j.now || fetchedAt));
+      const seen = new Set(withPos.map((a) => a.hex));
+      for (const hex of state.trails.keys()) if (!seen.has(hex)) state.trails.delete(hex);
+      state.aircraft = withPos.map((a) => enrich(a, j.now || fetchedAt, fetchedAt));
+      state.noPosition = (j.ac || []).length - withPos.length;
+      state.updatedAt = new Date(fetchedAt);
+      state.error = '';
+    } catch (e) {
+      state.error = e.message || 'unknown error';
+    } finally {
+      load.busy = false;
+      render();
+    }
+  }
+
+  let timer = null;
+  function schedule() {
+    clearInterval(timer);
+    if (document.visibilityState === 'visible') {
+      load();
+      timer = setInterval(load, REFRESH_MS);
+    }
+  }
+
+  // ---------- naming ----------
+  function nameOf(p) {
+    const cs = p.callsign;
+    const m = cs.match(/^([A-Z]{3})(\d[0-9A-Z]*)$/);
+    if (m && AIRLINES[m[1]]) return `${AIRLINES[m[1]]} ${m[2]}`;
+    return cs || p.raw.r || p.hex.toUpperCase();
+  }
+  function typeOf(p) {
+    const cat = p.raw.category;
+    if (cat === 'C1' || cat === 'C2') return 'Airport ground vehicle';
+    const t = p.raw.t;
+    if (t && TYPES[t]) return TYPES[t];
+    if (t) return `Type code ${t}`;
+    if (cat === 'A7') return 'Helicopter, model not in feed';
+    return 'Type not in feed';
+  }
+  function whoNote(p) {
+    if (/^N\d/.test(p.callsign)) return 'Flying under its US registration, which is typical of private and general aviation flights.';
+    if (!p.raw.r && !p.raw.t) return 'No registration in the feed. It may use an FAA privacy address.';
+    return '';
+  }
+  function lookText(p) {
+    if (p.onGround) return 'On the ground.';
+    if (p.el >= 75) return 'Almost straight overhead.';
+    if (p.el < 3) return `Right on the horizon, toward the ${compassWord(p.brg)}. Probably hidden by hills or buildings.`;
+    return `Look ${Math.round(p.el)}° up, toward the ${compassWord(p.brg)}.`;
+  }
+  function motionText(p) {
+    const r = p.raw.baro_rate ?? p.raw.geom_rate;
+    if (p.onGround) return p.gs ? `Moving at ${fmt(p.gs)} knots on the ground.` : 'Stopped.';
+    let v = 'level';
+    if (typeof r === 'number' && r > 300) v = `climbing ${fmt(r)} ft per minute`;
+    if (typeof r === 'number' && r < -300) v = `descending ${fmt(-r)} ft per minute`;
+    const dir = p.track != null ? `, heading ${compassWord(p.track)}` : '';
+    return `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'Altitude unknown'}, ${v}${dir}.`;
+  }
+
+  // ---------- rendering ----------
+  function visible() {
+    return state.aircraft.filter((p) => state.showGround || !p.onGround);
+  }
+
+  function render() {
+    // Default to the plane highest in the sky until the reader picks one.
+    if (!state.selected || !state.aircraft.some((a) => a.hex === state.selected)) {
+      const best = state.aircraft.filter((a) => !a.onGround).sort((a, b) => b.el - a.el)[0];
+      state.selected = best ? best.hex : null;
+    }
+    renderStatus();
+    renderChart();
+    renderCard();
+    renderList();
+  }
+
+  function renderStatus() {
+    const el = $('status');
+    const air = state.aircraft.filter((p) => !p.onGround).length;
+    const gnd = state.aircraft.length - air;
+    const time = state.updatedAt ? state.updatedAt.toLocaleTimeString('en-US') : null;
+    if (state.error) {
+      el.className = 'status error';
+      el.textContent = `The data source didn't answer (${state.error}). ` +
+        (time ? `The positions shown are from ${time} and are drawn in gray.` : 'Trying again in 10 seconds.');
+      return;
+    }
+    el.className = 'status';
+    if (!time) { el.textContent = 'Loading live positions.'; return; }
+    el.textContent = `Updated ${time}. ${air} in the air within ${NM} nautical miles, ${gnd} on the ground` +
+      (state.showGround ? '.' : ' (hidden).');
+  }
+
+  function size() {
+    const measured = Math.round(svg.getBoundingClientRect().width);
+    const w = measured >= 200 ? measured : 343;
+    return { w, h: w };
+  }
+
+  function svgEl(tag, attrs, text) {
+    const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderChart() {
+    const { w, h } = size();
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.replaceChildren();
+    const cx = w / 2, cy = h / 2, R = w / 2 - 34;
+    const stale = !!state.error;
+    const rot = state.view === 'sky' && state.heading != null ? state.heading : 0;
+
+    // Position on screen for a lat/lon, in the current view.
+    const place = state.view === 'sky'
+      ? (lat, lon, ft) => {
+          const { d, brg } = geo(state.obs, lat, lon);
+          const el = Math.max(0, elevation(d, ft * 0.3048));
+          const r = R * (90 - el) / 90, a = rad(brg - rot);
+          return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
+        }
+      : (lat, lon) => {
+          const { d, brg } = geo(state.obs, lat, lon);
+          const r = R * (d / M_PER_MI) / MAP_MI, a = rad(brg);
+          return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
+        };
+
+    const g = svgEl('g', {});
+    svg.append(g);
+    const line = '#E4EAF1', muted = '#4A5C70', text = '#0F1E2E', accent = '#1751C6';
+
+    if (state.view === 'sky') {
+      [0, 30, 60].forEach((e) => {
+        const r = R * (90 - e) / 90;
+        g.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: e === 0 ? muted : line, 'stroke-width': 1 }));
+        if (e) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${e}° up`));
+      });
+      g.append(svgEl('text', { x: cx, y: cy + 5, fill: muted, 'text-anchor': 'middle' }, '+'));
+      ['N', 'E', 'S', 'W'].forEach((c, i) => {
+        const a = rad(i * 90 - rot);
+        g.append(svgEl('text', {
+          x: cx + (R + 18) * Math.sin(a), y: cy - (R + 18) * Math.cos(a) + 6,
+          fill: c === 'N' ? text : muted, 'text-anchor': 'middle', 'font-weight': c === 'N' ? 600 : 400,
+        }, c));
+      });
+    } else {
+      [5, 10, 15, 20, 25].forEach((mi) => {
+        const r = R * mi / MAP_MI;
+        g.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: line, 'stroke-width': 1 }));
+        if (mi === 10 || mi === 20) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${mi} mi`));
+      });
+      g.append(svgEl('text', { x: cx, y: 22, fill: text, 'text-anchor': 'middle', 'font-weight': 600 }, 'N'));
+      const apBoxes = [...g.querySelectorAll('text')].map((t) => t.getBBox());
+      AIRPORTS.forEach((ap) => {
+        const { d } = geo(state.obs, ap.lat, ap.lon);
+        if (d / M_PER_MI > MAP_MI) return;
+        const p = place(ap.lat, ap.lon);
+        g.append(svgEl('rect', { x: p.x - 4, y: p.y - 4, width: 8, height: 8, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
+        const t = svgEl('text', { x: p.x + 8, y: p.y + 5, fill: muted }, ap.code);
+        g.append(t);
+        // Drop an airport code that would sit on top of a ring label or another code.
+        const b = t.getBBox();
+        if (apBoxes.some((o) => b.x < o.x + o.width && b.x + b.width > o.x && b.y < o.y + o.height && b.y + b.height > o.y)) t.remove();
+        else apBoxes.push(b);
+      });
+      g.append(svgEl('circle', { cx, cy, r: 4, fill: text }));
+    }
+
+    const planes = visible().filter((p) => state.view === 'map' ? p.d / M_PER_MI <= MAP_MI : true);
+    const order = planes.slice().sort((a, b) =>
+      (b.hex === state.selected) - (a.hex === state.selected) ||
+      (state.view === 'sky' ? b.el - a.el : a.d - b.d));
+    const boxes = [];
+    let hiddenLabels = 0;
+
+    // Trails and age circles first, so marks sit on top.
+    planes.forEach((p) => {
+      const trail = state.trails.get(p.hex) || [];
+      if (trail.length > 1) {
+        const pts = trail.map((t) => place(t.lat, t.lon, p.ft)).map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
+        g.append(svgEl('polyline', { points: pts, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '2 3' }));
+      }
+      if (state.view === 'map' && p.gs && p.age > 3) {
+        const r = R * (p.gs * 1.15078 * p.age / 3600) / MAP_MI;
+        if (r > 5) {
+          const q = place(p.raw.lat, p.raw.lon);
+          g.append(svgEl('circle', { cx: q.x, cy: q.y, r, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '3 4' }));
+        }
+      }
+    });
+
+    order.slice().reverse().forEach((p) => {
+      const q = place(p.raw.lat, p.raw.lon, p.ft);
+      // Point the mark along the track as it appears in this view.
+      let angle = 0;
+      if (p.track != null) {
+        if (state.view === 'map') angle = p.track;
+        else {
+          const ahead = project(p.raw.lat, p.raw.lon, p.track, Math.max(p.gs || 100, 50) * 0.514 * 30);
+          const q2 = place(ahead.lat, ahead.lon, p.ft);
+          angle = deg(Math.atan2(q2.x - q.x, -(q2.y - q.y)));
+        }
+      }
+      const isSel = p.hex === state.selected;
+      const old = stale || p.age > STALE_S;
+      const color = old || p.onGround ? muted : accent;
+      const mark = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex, style: 'cursor:pointer' });
+      mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
+      if (isSel) mark.append(svgEl('circle', { r: 15, fill: 'none', stroke: accent, 'stroke-width': 2 }));
+      mark.append(svgEl('path', {
+        d: 'M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z', transform: `rotate(${angle.toFixed(0)})`,
+        fill: p.onGround ? 'none' : color, stroke: color, 'stroke-width': 1.5, 'stroke-linejoin': 'round',
+      }));
+      g.append(mark);
+    });
+
+    // Labels: selected first, then highest (sky) or nearest (map). Skip any that would
+    // overlap another label or a fixed label.
+    const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    g.querySelectorAll('text').forEach((t) => { const b = t.getBBox(); boxes.push({ x: b.x - 2, y: b.y, w: b.width + 4, h: b.height }); });
+    order.forEach((p) => {
+      const q = place(p.raw.lat, p.raw.lon, p.ft);
+      const l1 = p.callsign || p.raw.r || p.hex.toUpperCase();
+      const l2 = p.onGround ? 'ground' : `${p.altFt != null ? fmt(p.altFt) + ' ft' : '?'} · ${p.gs != null ? fmt(p.gs) + ' kt' : '?'}`;
+      const isSel = p.hex === state.selected;
+      const t = svgEl('text', { fill: isSel ? accent : text, 'font-weight': isSel ? 600 : 400, 'pointer-events': 'none' });
+      // Both lines need an x before measuring, or the second line runs on after the first.
+      const s1 = svgEl('tspan', { x: 0 }, l1);
+      const s2 = svgEl('tspan', { x: 0, dy: 19, fill: muted, 'font-weight': 400 }, l2);
+      t.append(s1, s2);
+      g.append(t);
+      const bw = t.getBBox().width, bh = 40;
+      // Try right, left, above and below the mark; keep the first spot that fits and is free.
+      const spots = [
+        { x: q.x + 14, y: q.y - 18 }, { x: q.x - 14 - bw, y: q.y - 18 },
+        { x: q.x - bw / 2, y: q.y - 14 - bh }, { x: q.x - bw / 2, y: q.y + 14 },
+      ].map((s) => ({ x: s.x, y: s.y, w: bw, h: bh }))
+        .filter((s) => s.x >= 4 && s.x + bw <= w - 4 && s.y >= 4 && s.y + bh <= h - 4);
+      const free = (box) => !boxes.some((b) => overlaps(box, b));
+      const box = spots.find(free) || (isSel ? spots[0] : null);
+      if (!box) { t.remove(); hiddenLabels++; return; }
+      [t, s1, s2].forEach((e) => e.setAttribute('x', box.x.toFixed(1)));
+      t.setAttribute('y', (box.y + 15).toFixed(1));
+      boxes.push(box);
+    });
+
+    const legend = $('legend');
+    const hidden = hiddenLabels ? ` ${hiddenLabels} labels are hidden where they would overlap; the list below has every aircraft.` : '';
+    if (state.view === 'sky') {
+      const top = state.heading != null ? `the direction you're facing (${Math.round(state.heading)}° ${compassShort(state.heading)})` : 'north';
+      legend.textContent = `The center is straight overhead and the outer circle is the horizon. The top is ${top}. Gray marks are positions more than ${STALE_S} seconds old.${hidden}`;
+    } else {
+      legend.textContent = `North is up. The dot is you; squares are airports. A dashed circle shows how far a plane could have flown since its last report.${hidden}`;
+    }
+  }
+
+  function renderCard() {
+    const card = $('card');
+    const p = state.aircraft.find((a) => a.hex === state.selected);
+    if (!p) { card.hidden = true; return; }
+    card.hidden = false;
+    const mi = p.d / M_PER_MI, slantMi = p.slant / M_PER_MI;
+    const delay = p.slant / SOUND_MS;
+    const moved = p.gs ? (p.gs * 1.15078 * delay / 3600) : 0;
+    const note = whoNote(p);
+    const src = SOURCES[p.raw.type] || p.raw.type || 'unknown';
+    const rows = [
+      ['Aircraft', `${typeOf(p)}${p.raw.r ? `, registration ${p.raw.r}` : ''}`],
+      ['Altitude', motionText(p)],
+      ['Speed', p.gs != null ? `${fmt(p.gs)} knots (${fmt(p.gs * 1.15078)} mph)` : 'Not in feed'],
+      ['Distance', `${mi.toFixed(1)} miles along the ground, ${slantMi.toFixed(1)} miles in a straight line`],
+      ['Route', 'Not in this feed. Planes don\'t broadcast where they\'re going.'],
+      ['Position', `${Math.round(p.age)} seconds old, ${src}`],
+    ];
+    if (p.raw.squawk) rows.push(['Squawk', p.raw.squawk]);
+    if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency status', p.raw.emergency]);
+
+    card.replaceChildren();
+    const h = document.createElement('h3');
+    h.textContent = nameOf(p);
+    const look = document.createElement('p');
+    look.className = 'look';
+    look.textContent = lookText(p);
+    card.append(h, look);
+    if (!p.onGround && p.el >= 3 && p.el < 75) {
+      const tip = document.createElement('p');
+      tip.className = 'muted small';
+      tip.textContent = 'A fist held at arm\'s length covers about 10° of sky.';
+      card.append(tip);
+    }
+    if (!p.onGround && slantMi <= 8) {
+      const sound = document.createElement('p');
+      sound.className = 'small';
+      sound.textContent = `If you can hear it, that sound left the plane about ${Math.round(delay)} seconds ago` +
+        (moved >= 0.1 ? `. It has flown about ${moved.toFixed(1)} miles since, so look ahead of the sound.` : '.');
+      card.append(sound);
+    }
+    if (note) {
+      const n = document.createElement('p');
+      n.className = 'muted small';
+      n.textContent = note;
+      card.append(n);
+    }
+    const dl = document.createElement('dl');
+    rows.forEach(([k, v]) => {
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      dl.append(dt, dd);
+    });
+    card.append(dl);
+  }
+
+  function renderList() {
+    const ul = $('list');
+    const planes = visible().slice().sort((a, b) => a.d - b.d);
+    ul.replaceChildren();
+    if (!planes.length) {
+      const li = document.createElement('li');
+      li.className = 'muted small';
+      li.style.padding = '10px 4px';
+      li.textContent = state.updatedAt ? 'No aircraft in range right now.' : 'Waiting for the first update.';
+      ul.append(li);
+      return;
+    }
+    planes.forEach((p) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.hex = p.hex;
+      if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = `${nameOf(p)} · ${typeOf(p)}`;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      const where = p.onGround ? 'on the ground' : `${Math.round(Math.max(p.el, 0))}° up ${compassShort(p.brg)}`;
+      meta.textContent = [
+        p.onGround ? null : (p.altFt != null ? `${fmt(p.altFt)} ft` : null),
+        p.gs != null ? `${fmt(p.gs)} kt` : null,
+        `${(p.d / M_PER_MI).toFixed(1)} mi`,
+        where,
+        `${Math.round(p.age)} s old`,
+      ].filter(Boolean).join(' · ');
+      b.append(who, meta);
+      li.append(b);
+      ul.append(li);
+    });
+  }
+
+  // ---------- interaction ----------
+  function select(hex) {
+    state.selected = hex;
+    render();
+  }
+  svg.addEventListener('click', (e) => {
+    const g = e.target.closest('[data-hex]');
+    if (g) select(g.getAttribute('data-hex'));
+  });
+  $('list').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-hex]');
+    if (b) { select(b.dataset.hex); svg.scrollIntoView({ block: 'nearest' }); }
+  });
+
+  const placeSel = $('place');
+  PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));
+  placeSel.addEventListener('change', () => {
+    if (placeSel.value === 'me') return;
+    setObserver(PLACES.find((p) => p.id === placeSel.value));
+  });
+  function setObserver(obs) {
+    state.obs = obs;
+    state.selected = null;
+    state.aircraft = [];
+    state.trails.clear();
+    state.updatedAt = null;
+    $('title').textContent = `What's flying over ${obs.title}`;
+    document.title = `Sky over ${obs.title}`;
+    render();
+    schedule();
+  }
+
+  $('locate').addEventListener('click', () => {
+    if (!navigator.geolocation) { $('status').textContent = 'This browser can\'t share a location.'; return; }
+    $('status').textContent = 'Asking for your location. It is rounded to about 1 km before it leaves your phone.';
+    navigator.geolocation.getCurrentPosition((pos) => {
+      let me = [...placeSel.options].find((o) => o.value === 'me');
+      if (!me) { me = new Option('My location', 'me'); placeSel.append(me); }
+      placeSel.value = 'me';
+      setObserver({ id: 'me', label: 'My location', title: 'you', lat: pos.coords.latitude, lon: pos.coords.longitude });
+    }, (err) => {
+      $('status').textContent = `Couldn't get your location (${err.message}).`;
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+  });
+
+  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+    state.view = b.dataset.view;
+    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    $('compass').hidden = state.view !== 'sky' || !('DeviceOrientationEvent' in window);
+    render();
+  }));
+
+  $('ground').addEventListener('change', (e) => { state.showGround = e.target.checked; render(); });
+
+  // "Turn with my phone": rotate the sky view so the top points where you face.
+  let wakeLock = null, frame = 0;
+  function onHeading(hd) {
+    if (hd == null || isNaN(hd)) return;
+    const angle = (screen.orientation && screen.orientation.angle) || 0;
+    const next = (hd + angle + 360) % 360;
+    if (state.heading != null && Math.abs(((next - state.heading + 540) % 360) - 180) < 1) return;
+    state.heading = next;
+    if (!frame) frame = requestAnimationFrame(() => { frame = 0; renderChart(); });
+  }
+  const onOrient = (e) => { if (e.webkitCompassHeading != null) onHeading(e.webkitCompassHeading); };
+  const onAbsolute = (e) => { if (e.alpha != null) onHeading(360 - e.alpha); };
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch { wakeLock = null; }
+  }
+  $('compass').hidden = !('DeviceOrientationEvent' in window);
+  $('compass').addEventListener('click', async () => {
+    const btn = $('compass');
+    if (state.heading != null || btn.dataset.on === '1') {
+      window.removeEventListener('deviceorientation', onOrient);
+      window.removeEventListener('deviceorientationabsolute', onAbsolute);
+      state.heading = null; btn.dataset.on = ''; btn.textContent = 'Turn with my phone';
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+      renderChart();
+      return;
+    }
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== 'granted') throw new Error('permission denied');
+      }
+    } catch (err) {
+      $('status').textContent = `Couldn't read the compass (${err.message}).`;
+      return;
+    }
+    window.addEventListener('deviceorientation', onOrient);
+    window.addEventListener('deviceorientationabsolute', onAbsolute);
+    btn.dataset.on = '1';
+    btn.textContent = 'Stop turning';
+    keepAwake();
+    setTimeout(() => {
+      if (state.heading == null && btn.dataset.on === '1') $('status').textContent = 'No compass reading from this device. The top of the sky view stays north.';
+    }, 3000);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && $('compass').dataset.on === '1') keepAwake();
+    schedule();
+  });
+
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 150); });
+
+  render();
+  schedule();
+})();
+</script>
+</body>
+</html>
