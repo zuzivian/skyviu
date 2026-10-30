@@ -48,6 +48,12 @@
   svg#sky { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   svg text { font-family: Inter, system-ui, sans-serif; font-size: 16px; }
   .legend { font-size: 16px; color: var(--muted); margin-top: 10px; }
+  .ar { position: relative; height: 72vh; height: 72svh; min-height: 380px; max-height: 760px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); touch-action: none; user-select: none; -webkit-user-select: none; }
+  .ar[hidden] { display: none; }
+  .ar video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .ar svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .arhint { position: absolute; left: 12px; right: 12px; top: 12px; margin: 0; background: var(--bg); color: var(--text); border: 1px solid var(--muted); border-radius: 8px; padding: 8px 12px; font-size: 16px; line-height: 1.4; }
+  .arhint:empty { display: none; }
 
   .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
   .card dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 0; font-size: 16px; }
@@ -78,14 +84,24 @@
   </div>
   <div class="controls">
     <div class="seg" role="group" aria-label="View">
-      <button type="button" data-view="sky" aria-pressed="true">Sky from here</button>
-      <button type="button" data-view="map" aria-pressed="false">Map from above</button>
+      <button type="button" data-view="camera" aria-pressed="false">Camera</button>
+      <button type="button" data-view="sky" aria-pressed="true">Sky</button>
+      <button type="button" data-view="map" aria-pressed="false">Map</button>
     </div>
     <button id="compass" type="button" hidden>Turn with my phone</button>
   </div>
 
   <p id="status" class="status" role="status">Loading live positions.</p>
   <svg id="sky" role="img" aria-label="Aircraft positions"></svg>
+  <div id="ar" class="ar" hidden>
+    <video id="cam" playsinline muted autoplay></video>
+    <svg id="arsvg" role="img" aria-label="Camera view with aircraft labels"></svg>
+    <p id="arhint" class="arhint" aria-live="polite"></p>
+  </div>
+  <div id="arbar" class="controls" hidden>
+    <button id="realign" type="button">Reset alignment</button>
+    <span id="arnudge" class="small muted"></span>
+  </div>
   <p id="legend" class="legend"></p>
   <label class="check"><input id="ground" type="checkbox"> Show ground traffic</label>
 
@@ -101,7 +117,7 @@
     <p><strong>Where a plane is right now.</strong> Every position is a few seconds to about a minute old. In one test the oldest was 45 seconds. This page shows each plane where it was last heard and says how old that is. The dashed circle on the map shows how far it could have flown since.</p>
     <p><strong>Where it's going.</strong> Planes don't broadcast their route. Flight apps add routes from airline schedules. This page doesn't guess.</p>
     <p><strong>Who some aircraft are.</strong> Some owners use a temporary privacy address from the FAA's PIA program, so the feed can't match them to a registration or aircraft type.</p>
-    <p><strong>Exactly where to look.</strong> The angles assume a flat, open horizon and ignore trees, hills and buildings. Altitude comes from the aircraft's own instruments, so angles are close, not exact.</p>
+    <p><strong>Exactly where to look.</strong> The angles assume a flat, open horizon and ignore trees, hills and buildings. Altitude comes from the aircraft's own instruments, so angles are close, not exact. In the camera view, your phone's compass and camera add their own error, which is why you can drag the labels into line.</p>
     <p><strong>Exact sound delay.</strong> The delay uses a fixed speed of sound, 340 meters per second. Temperature and wind change it.</p>
   </section>
 
@@ -381,6 +397,11 @@
   }
 
   function renderChart() {
+    const camera = state.view === 'camera';
+    svg.style.display = camera ? 'none' : '';
+    $('ar').hidden = !camera;
+    $('arbar').hidden = !camera;
+    if (camera) { drawAR(); return; }
     const { w, h } = size();
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     svg.replaceChildren();
@@ -624,6 +645,285 @@
     });
   }
 
+  // ---------- camera view ----------
+  // Field of view across the long side of a typical phone main camera. An estimate; the
+  // drag-to-align gesture corrects what this and the compass get wrong.
+  const CAMERA_LONG_FOV = 67;
+  const arSvg = $('arsvg'), video = $('cam');
+  const ar = {
+    stream: null, listening: false, axes: null, absolute: false, offset: null, accuracy: null,
+    nudgeAz: 0, nudgeEl: 0, frame: 0, F: 400, drag: null, camMsg: '', motionMsg: '',
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem('skyviu-align') || 'null');
+    if (saved) { ar.nudgeAz = +saved.az || 0; ar.nudgeEl = +saved.el || 0; }
+  } catch { /* storage unavailable; start unaligned */ }
+
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const norm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  const mix = (a, b, k) => norm([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]);
+  const wrap = (d) => ((d % 360) + 360) % 360;
+  const angDiff = (a, b) => ((a - b + 540) % 360) - 180;   // a minus b, in -180..180
+  const azOf = (v) => wrap(deg(Math.atan2(v[0], v[1])));
+
+  // Screen axes in east-north-up coordinates, from the W3C device orientation angles.
+  function deviceAxes(alpha, beta, gamma) {
+    const cX = Math.cos(rad(beta)), sX = Math.sin(rad(beta));
+    const cY = Math.cos(rad(gamma)), sY = Math.sin(rad(gamma));
+    const cZ = Math.cos(rad(alpha)), sZ = Math.sin(rad(alpha));
+    const x = [cZ * cY - sZ * sX * sY, cY * sZ + cZ * sX * sY, -cX * sY];    // device right edge
+    const y = [-cX * sZ, cZ * cX, sX];                                     // device top edge
+    const z = [cY * sZ * sX + cZ * sY, sZ * sY - cZ * cY * sX, cX * cY];   // out of the screen
+    const t = rad((screen.orientation && screen.orientation.angle) || 0);
+    const up = norm([y[0] * Math.cos(t) + x[0] * Math.sin(t), y[1] * Math.cos(t) + x[1] * Math.sin(t), y[2] * Math.cos(t) + x[2] * Math.sin(t)]);
+    const f = [-z[0], -z[1], -z[2]];                                       // where the back camera looks
+    return { f, up };
+  }
+
+  function onArOrientation(e) {
+    // Browsers without a sensor send one event with empty values; ignore those.
+    if (e.alpha == null || e.beta == null || e.gamma == null) return;
+    const isAbs = e.type === 'deviceorientationabsolute' || e.absolute === true;
+    if (isAbs) ar.absolute = true;
+    else if (ar.absolute) return;                // prefer absolute readings when the browser has them
+    ar.motionMsg = '';
+    const next = deviceAxes(e.alpha, e.beta, e.gamma);
+    if (isAbs) ar.offset = 0;
+    else if (e.webkitCompassHeading != null) {
+      // iOS: alpha starts from an arbitrary direction. Learn the gap to the compass slowly, so the
+      // gyro keeps motion smooth and the compass keeps it pointed the right way.
+      if (Math.abs(next.f[2]) < 0.85) {
+        const gap = wrap(e.webkitCompassHeading - azOf(next.f));
+        ar.offset = ar.offset == null ? gap : wrap(ar.offset + 0.05 * angDiff(gap, ar.offset));
+      }
+      if (e.webkitCompassAccuracy >= 0) ar.accuracy = e.webkitCompassAccuracy;
+    }
+    if (!ar.axes) ar.axes = next;
+    else {
+      const f = mix(ar.axes.f, next.f, 0.35);
+      let up = mix(ar.axes.up, next.up, 0.35);
+      up = norm(up.map((v, i) => v - dot(up, f) * f[i]));
+      ar.axes = { f, up };
+    }
+    if (!ar.frame) ar.frame = requestAnimationFrame(() => { ar.frame = 0; drawAR(); });
+  }
+
+  async function startCamera(fromTap) {
+    ar.camMsg = ''; ar.motionMsg = '';
+    if (fromTap && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        if (await DeviceOrientationEvent.requestPermission() !== 'granted') ar.motionMsg = 'Motion access was not allowed, so labels can\'t follow your phone.';
+      } catch (err) { ar.motionMsg = `Couldn't read the compass (${err.message}).`; }
+    }
+    if (!ar.listening) {
+      window.addEventListener('deviceorientation', onArOrientation);
+      window.addEventListener('deviceorientationabsolute', onArOrientation);
+      ar.listening = true;
+    }
+    keepAwake();
+    if (!ar.stream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        if (state.view !== 'camera') { stream.getTracks().forEach((t) => t.stop()); return; }
+        ar.stream = stream;
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+      } catch (err) {
+        ar.camMsg = `No camera picture (${err.message}). Labels still follow your phone.`;
+      }
+    } else if (!ar.stream) ar.camMsg = 'This browser has no camera access. Labels still follow your phone.';
+    drawAR();
+  }
+
+  function stopCamera() {
+    if (ar.stream) ar.stream.getTracks().forEach((t) => t.stop());
+    ar.stream = null;
+    video.srcObject = null;
+    if (ar.listening) {
+      window.removeEventListener('deviceorientation', onArOrientation);
+      window.removeEventListener('deviceorientationabsolute', onArOrientation);
+      ar.listening = false;
+    }
+    ar.axes = null; ar.absolute = false; ar.offset = null;
+    if (wakeLock && $('compass').dataset.on !== '1') { wakeLock.release(); wakeLock = null; }
+  }
+
+  function saveAlign() {
+    try { localStorage.setItem('skyviu-align', JSON.stringify({ az: ar.nudgeAz, el: ar.nudgeEl })); } catch { /* not saved */ }
+  }
+
+  function drawAR() {
+    if (state.view !== 'camera') return;
+    const box = arSvg.getBoundingClientRect();
+    const W = box.width || 343, H = box.height || 500;   // unrounded, so 16px text stays 16px
+    arSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    arSvg.replaceChildren();
+    const half = Math.tan(rad(CAMERA_LONG_FOV / 2));
+    if (video.videoWidth) {
+      const vw = video.videoWidth, vh = video.videoHeight;
+      ar.F = (Math.max(vw, vh) / 2) / half * Math.max(W / vw, H / vh);   // object-fit: cover
+    } else ar.F = (Math.max(W, H) / 2) / half;
+    const F = ar.F;
+
+    const nudge = $('arnudge');
+    const parts = [];
+    if (Math.round(ar.nudgeAz)) parts.push(`${Math.abs(Math.round(ar.nudgeAz))}° ${ar.nudgeAz < 0 ? 'right' : 'left'}`);
+    if (Math.round(ar.nudgeEl)) parts.push(`${Math.abs(Math.round(ar.nudgeEl))}° ${ar.nudgeEl > 0 ? 'up' : 'down'}`);
+    nudge.textContent = parts.length ? `Labels moved ${parts.join(', ')}.` : 'Drag the picture to line labels up with what you see.';
+
+    const hint = $('arhint');
+    if (!ar.axes) {
+      hint.textContent = ar.motionMsg || ar.camMsg ||
+        'Waiting for the compass. If nothing happens, move your phone in a figure eight.';
+      return;
+    }
+    const { f, up } = ar.axes;
+    const right = cross(f, up);
+    const offset = (ar.offset || 0) + ar.nudgeAz;
+    const project = (az, el) => {
+      const a = rad(az - offset), e = rad(el + ar.nudgeEl);
+      const v = [Math.cos(e) * Math.sin(a), Math.cos(e) * Math.cos(a), Math.sin(e)];
+      const zc = dot(v, f);
+      if (zc < 0.05) return null;
+      return { x: W / 2 + F * dot(v, right) / zc, y: H / 2 - F * dot(v, up) / zc };
+    };
+    const onScreen = (q, m = 0) => q && q.x >= -m && q.x <= W + m && q.y >= -m && q.y <= H + m;
+    const g = svgEl('g', {});
+    arSvg.append(g);
+    const white = '#FFFFFF', muted = '#4A5C70', text = '#0F1E2E', accent = '#1751C6';
+
+    // Horizon: a white line with a thin dark core so it reads on sky and on ground.
+    let seg = [];
+    const flush = () => {
+      if (seg.length > 1) {
+        const pts = seg.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
+        g.append(svgEl('polyline', { points: pts, fill: 'none', stroke: white, 'stroke-width': 4 }));
+        g.append(svgEl('polyline', { points: pts, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
+      }
+      seg = [];
+    };
+    for (let az = 0; az <= 360; az += 3) { const q = project(az, 0); if (q) seg.push(q); else flush(); }
+    flush();
+    const chips = [];
+    const chip = (x, y, label, opts = {}) => {
+      const t = svgEl('text', { x, y, fill: opts.color || text, 'font-weight': opts.bold ? 600 : 400, 'text-anchor': opts.anchor || 'start' }, label);
+      g.append(t);
+      const b = t.getBBox();
+      const r = svgEl('rect', { x: b.x - 6, y: b.y - 3, width: b.width + 12, height: b.height + 6, rx: 6, fill: white, stroke: opts.border || muted, 'stroke-width': opts.border ? 2 : 1 });
+      g.insertBefore(r, t);
+      return { x: b.x - 6, y: b.y - 3, w: b.width + 12, h: b.height + 6, els: [r, t] };
+    };
+    ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].forEach((c, i) => {
+      const q = project(i * 45, 0);
+      if (onScreen(q, -10)) chips.push(chip(q.x, q.y + 30, c, { anchor: 'middle', bold: c === 'N' }));
+    });
+
+    const planes = visible();
+    const sel = planes.find((p) => p.hex === state.selected);
+    const placed = planes.map((p) => ({ p, q: project(p.brg, p.el) })).filter((o) => onScreen(o.q, 40));
+    placed.sort((a, b) => (b.p.hex === state.selected) - (a.p.hex === state.selected) || a.p.d - b.p.d);
+
+    // Rings first: how far each plane could have flown since its last report.
+    placed.forEach(({ p, q }) => {
+      if (!p.gs || p.onGround) return;
+      const r = F * Math.tan(Math.atan2(p.gs * 0.5144 * p.age, p.slant));
+      if (r > 16 && r < Math.max(W, H)) {
+        g.append(svgEl('circle', { cx: q.x, cy: q.y, r, fill: 'none', stroke: white, 'stroke-width': 3, 'stroke-dasharray': '4 5' }));
+        g.append(svgEl('circle', { cx: q.x, cy: q.y, r, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '4 5' }));
+      }
+    });
+    const taken = chips.map(({ x, y, w, h }) => ({ x, y, w, h }));
+    const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    placed.slice().reverse().forEach(({ p, q }) => {
+      const isSel = p.hex === state.selected;
+      const old = !!state.error || p.age > STALE_S;
+      const color = old || p.onGround ? muted : accent;
+      const m = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex });
+      m.append(svgEl('circle', { r: 24, fill: 'transparent' }));
+      m.append(svgEl('circle', { r: isSel ? 15 : 11, fill: 'none', stroke: white, 'stroke-width': 5 }));
+      m.append(svgEl('circle', { r: isSel ? 15 : 11, fill: 'none', stroke: color, 'stroke-width': isSel ? 3 : 2 }));
+      m.append(svgEl('circle', { r: 2.5, fill: color }));
+      g.append(m);
+    });
+    let hidden = 0;
+    placed.forEach(({ p, q }) => {
+      const isSel = p.hex === state.selected;
+      const t = svgEl('text', { fill: isSel ? accent : text, 'font-weight': isSel ? 600 : 400, 'pointer-events': 'none' });
+      const l1 = `${p.callsign || p.raw.r || p.hex.toUpperCase()}${p.raw.t ? ' · ' + p.raw.t : ''}`;
+      const l2 = p.onGround ? `on the ground · ${(p.d / M_PER_MI).toFixed(1)} mi` :
+        `${p.altFt != null ? fmt(p.altFt) + ' ft' : '?'} · ${(p.d / M_PER_MI).toFixed(1)} mi`;
+      const s1 = svgEl('tspan', { x: 0 }, l1);
+      const s2 = svgEl('tspan', { x: 0, dy: 19, fill: muted, 'font-weight': 400 }, l2);
+      t.append(s1, s2);
+      g.append(t);
+      const bw = t.getBBox().width + 12, bh = 46;
+      const spots = [
+        { x: q.x - bw / 2, y: q.y - 24 - bh }, { x: q.x - bw / 2, y: q.y + 24 },
+        { x: q.x + 22, y: q.y - bh / 2 }, { x: q.x - 22 - bw, y: q.y - bh / 2 },
+      ].map((s) => ({ x: s.x, y: s.y, w: bw, h: bh })).filter((s) => s.x >= 2 && s.x + bw <= W - 2 && s.y >= 2 && s.y + bh <= H - 2);
+      const spot = spots.find((s) => !taken.some((o) => overlaps(s, o))) || (isSel ? spots[0] : null);
+      if (!spot) { t.remove(); hidden++; return; }
+      taken.push(spot);
+      [t, s1, s2].forEach((e) => e.setAttribute('x', (spot.x + 6).toFixed(1)));
+      t.setAttribute('y', (spot.y + 19).toFixed(1));
+      const r = svgEl('rect', { x: spot.x, y: spot.y, width: bw, height: bh, rx: 6, fill: white, stroke: isSel ? accent : muted, 'stroke-width': isSel ? 2 : 1, 'data-hex': p.hex });
+      g.insertBefore(r, t);
+    });
+
+    // The hint line: where to turn for the selected plane, or what the view is showing.
+    const fAz = wrap(azOf(f) + offset), fEl = deg(Math.asin(Math.max(-1, Math.min(1, f[2])))) - ar.nudgeEl;
+    if (Math.abs(f[2]) < 0.95) chip(W / 2, H - 18, `Facing ${compassShort(fAz)}, ${Math.round(fAz)}°`, { anchor: 'middle' });
+    const out = planes.length - placed.length;
+    let msg = '';
+    if (!msg && sel) {
+      const selShown = placed.some((o) => o.p.hex === sel.hex);
+      if (selShown) msg = `${nameOf(sel)}: position ${Math.round(sel.age)} s old.`;
+      else {
+        const dAz = angDiff(sel.brg, fAz), dEl = sel.el - fEl;
+        const moves = [];
+        if (Math.abs(dAz) > 15) moves.push(Math.abs(dAz) > 150 ? 'turn around' : `turn ${dAz > 0 ? 'right' : 'left'}`);
+        if (Math.abs(dEl) > 12) moves.push(`tilt ${dEl > 0 ? 'up' : 'down'}`);
+        msg = `To find ${nameOf(sel)}, ${moves.join(' and ') || 'hold steady'}.`;
+      }
+    } else if (!msg) msg = planes.length ? 'Point your phone at the sky.' : 'No aircraft in range right now.';
+    if (ar.accuracy != null) msg += ` Compass accurate to about ${Math.round(ar.accuracy)}°.`;
+    hint.textContent = msg;
+
+    $('legend').textContent = (ar.camMsg ? ar.camMsg + ' ' : '') + `Rings mark where each plane was last reported; the dashed circle shows how far it could have flown since. ` +
+      `Phone compasses can be off by several degrees, more near metal and cars, so drag the picture to line a label up with a plane you can see. ` +
+      (out ? `${out} more are out of view.` : '') + (hidden ? ` ${hidden} labels are hidden where they would overlap.` : '');
+  }
+
+  // Drag to align; tap to pick a plane.
+  const arBox = $('ar');
+  arBox.addEventListener('pointerdown', (e) => {
+    ar.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, az: ar.nudgeAz, el: ar.nudgeEl, moved: false };
+    try { arBox.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
+  });
+  arBox.addEventListener('pointermove', (e) => {
+    const d = ar.drag;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (!d.moved && Math.hypot(dx, dy) < 8) return;
+    d.moved = true;
+    ar.nudgeAz = d.az - deg(Math.atan(dx / ar.F));
+    ar.nudgeEl = d.el - deg(Math.atan(dy / ar.F));
+    if (!ar.frame) ar.frame = requestAnimationFrame(() => { ar.frame = 0; drawAR(); });
+  });
+  const endDrag = (e) => {
+    const d = ar.drag;
+    if (!d || d.id !== e.pointerId) return;
+    ar.drag = null;
+    if (d.moved) { saveAlign(); drawAR(); return; }
+    const hit = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.closest && el.closest('#arsvg [data-hex]'));
+    if (hit) select(hit.closest('[data-hex]').getAttribute('data-hex'));
+  };
+  arBox.addEventListener('pointerup', endDrag);
+  arBox.addEventListener('pointercancel', (e) => { if (ar.drag && ar.drag.id === e.pointerId) ar.drag = null; });
+  $('realign').addEventListener('click', () => { ar.nudgeAz = 0; ar.nudgeEl = 0; saveAlign(); drawAR(); });
+  video.addEventListener('loadedmetadata', () => drawAR());
+
   // ---------- interaction ----------
   function select(hex) {
     state.selected = hex;
@@ -635,7 +935,7 @@
   });
   $('list').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-hex]');
-    if (b) { select(b.dataset.hex); svg.scrollIntoView({ block: 'nearest' }); }
+    if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : svg).scrollIntoView({ block: 'nearest' }); }
   });
 
   const placeSel = $('place');
@@ -670,9 +970,13 @@
   });
 
   document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+    const was = state.view;
     state.view = b.dataset.view;
     document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
     $('compass').hidden = state.view !== 'sky' || !('DeviceOrientationEvent' in window);
+    // Start the camera inside the tap: iOS only asks for motion access from a tap.
+    if (state.view === 'camera' && was !== 'camera') startCamera(true);
+    if (state.view !== 'camera' && was === 'camera') stopCamera();
     render();
   }));
 
@@ -723,7 +1027,9 @@
     }, 3000);
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && $('compass').dataset.on === '1') keepAwake();
+    const shown = document.visibilityState === 'visible';
+    if (shown && ($('compass').dataset.on === '1' || state.view === 'camera')) keepAwake();
+    if (state.view === 'camera') { if (shown) startCamera(false); else stopCamera(); }
     schedule();
   });
 
