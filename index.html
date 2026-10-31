@@ -54,6 +54,9 @@
   .ar svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .arhint { position: absolute; left: 12px; right: 12px; top: 12px; margin: 0; background: var(--bg); color: var(--text); border: 1px solid var(--muted); border-radius: 8px; padding: 8px 12px; font-size: 16px; line-height: 1.4; }
   .arhint:empty { display: none; }
+  .arcard { position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0; background: var(--bg); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 12px; font-size: 16px; line-height: 1.4; pointer-events: none; }
+  .arcard[hidden] { display: none; }
+  .arcard strong { display: block; font-weight: 600; color: var(--accent); }
 
   .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
   .card dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 0; font-size: 16px; }
@@ -97,8 +100,11 @@
     <video id="cam" playsinline muted autoplay></video>
     <svg id="arsvg" role="img" aria-label="Camera view with aircraft labels"></svg>
     <p id="arhint" class="arhint" aria-live="polite"></p>
+    <div id="arcard" class="arcard" hidden><strong id="arname"></strong><span id="armeta" class="meta"></span></div>
   </div>
   <div id="arbar" class="controls" hidden>
+    <button id="alignsun" type="button" hidden>Line up on the sun</button>
+    <button id="alignplane" type="button" hidden></button>
     <button id="realign" type="button">Reset alignment</button>
     <span id="arnudge" class="small muted"></span>
   </div>
@@ -107,6 +113,10 @@
 
   <section id="card" class="card" aria-live="polite" hidden></section>
 
+  <h2>Coming over next</h2>
+  <p class="muted small">Planes on course to pass at least 30° up in the next 10 minutes. This assumes each keeps its heading, speed and climb, so a plane turning to land will often go somewhere else.</p>
+  <ul id="next" class="list"></ul>
+
   <h2>Everything in range</h2>
   <ul id="list" class="list"></ul>
 
@@ -114,10 +124,10 @@
     <h2>What this data can't see</h2>
     <p><strong>Aircraft that don't broadcast.</strong> The FAA requires ADS-B Out in most controlled airspace: Class A, B and C, and Class E at and above 10,000 feet. Outside that airspace, some aircraft fly without it, and they never appear here.</p>
     <p><strong>Low or hidden aircraft.</strong> This feed comes from volunteer receivers. A receiver needs a line of sight to the aircraft, so low flights behind hills or buildings, and landings at small airports, can drop out.</p>
-    <p><strong>Where a plane is right now.</strong> Every position is a few seconds to about a minute old. In one test the oldest was 45 seconds. This page shows each plane where it was last heard and says how old that is. The dashed circle on the map shows how far it could have flown since.</p>
-    <p><strong>Where it's going.</strong> Planes don't broadcast their route. Flight apps add routes from airline schedules. This page doesn't guess.</p>
+    <p><strong>Where a plane is right now.</strong> Every position is a few seconds to about a minute old. In one test the oldest was 45 seconds. This page moves each plane forward along its last heading at its last speed, so a plane that has turned since then will be off. Positions more than a minute old are drawn in gray, where they were last heard.</p>
+    <p><strong>Where it's going.</strong> Planes don't broadcast their route. Flight apps add routes from airline schedules. This page doesn't guess, and "Coming over next" only follows each plane in a straight line.</p>
     <p><strong>Who some aircraft are.</strong> Some owners use a temporary privacy address from the FAA's PIA program, so the feed can't match them to a registration or aircraft type.</p>
-    <p><strong>Exactly where to look.</strong> The angles assume a flat, open horizon and ignore trees, hills and buildings. Altitude comes from the aircraft's own instruments, so angles are close, not exact. In the camera view, your phone's compass and camera add their own error, which is why you can drag the labels into line.</p>
+    <p><strong>Exactly where to look.</strong> The angles assume a flat, open horizon and ignore trees, hills and buildings. Altitude comes from the aircraft's own instruments, so angles are close, not exact. In the camera view, your phone's compass and camera add their own error, which is why you can line the labels up on the sun or on a plane you can see.</p>
     <p><strong>Exact sound delay.</strong> The delay uses a fixed speed of sound, 340 meters per second. Temperature and wind change it.</p>
   </section>
 
@@ -194,7 +204,11 @@
 
   const NM = 25;               // query radius, nautical miles
   const REFRESH_MS = 10000;
-  const STALE_S = 30;
+  const STALE_S = 60;          // older positions are gray and not moved forward
+  const PROJECT_MAX_S = 90;    // never move a plane forward further than this
+  const NEXT_S = 600;          // how far ahead "Coming over next" looks
+  const NEXT_MIN_EL = 30;
+  const KT_MS = 0.514444;      // meters per second in a knot
   const EARTH_M = 6371008.8;
   const SOUND_MS = 340;
   const M_PER_MI = 1609.344;
@@ -214,6 +228,8 @@
     aircraft: [],
     trails: new Map(),       // hex -> [{lat, lon, t}]
     selected: null,
+    wanted: null,            // plane named in a shared link, picked once data arrives
+    notice: '',
     updatedAt: null,
     error: '',
   };
@@ -253,19 +269,38 @@
     const onGround = a.alt_baro === 'ground' ||
       (typeof a.alt_baro === 'number' && a.alt_baro < 500 && typeof a.gs === 'number' && a.gs < 50);
     const ft = typeof a.alt_geom === 'number' ? a.alt_geom : (typeof a.alt_baro === 'number' ? a.alt_baro : 0);
-    const { d, brg } = geo(state.obs, a.lat, a.lon);
-    const h = onGround ? 0 : ft * 0.3048;
-    const el = elevation(d, h);
-    const slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
     const lag = Math.max(0, (fetchedAt - nowMs) / 1000);
-    const age = (a.seen_pos ?? a.seen ?? 0) + lag;
-    return {
-      raw: a, hex: a.hex, onGround, ft, d, brg, el, slant, age,
+    return locate({
+      raw: a, hex: a.hex, onGround, ft, fetchedAt,
+      age: (a.seen_pos ?? a.seen ?? 0) + lag,   // seconds old when it reached this page
       altFt: typeof a.alt_baro === 'number' ? a.alt_baro : null,
       gs: typeof a.gs === 'number' ? a.gs : null,
       track: typeof a.track === 'number' ? a.track : (typeof a.true_heading === 'number' ? a.true_heading : null),
       callsign: (a.flight || '').trim(),
-    };
+    }, fetchedAt);
+  }
+
+  // Where a plane should be at atMs: its last position moved along its track at its last speed
+  // and climb. A position that was already stale when it arrived stays where it was heard.
+  function locate(p, atMs) {
+    p.since = p.age + Math.max(0, (atMs - p.fetchedAt) / 1000);
+    p.moved = !p.onGround && p.gs != null && p.track != null && p.age <= STALE_S;
+    p.lat = p.raw.lat; p.lon = p.raw.lon; p.ftNow = p.onGround ? 0 : p.ft;
+    if (p.moved) {
+      const s = Math.min(p.since, PROJECT_MAX_S);
+      const to = project(p.raw.lat, p.raw.lon, p.track, p.gs * KT_MS * s);
+      const rate = p.raw.baro_rate ?? p.raw.geom_rate;
+      p.lat = to.lat; p.lon = to.lon;
+      if (typeof rate === 'number') p.ftNow = Math.max(0, p.ft + rate * s / 60);
+    }
+    const { d, brg } = geo(state.obs, p.lat, p.lon);
+    const h = p.ftNow * 0.3048;
+    p.d = d; p.brg = brg; p.el = elevation(d, h);
+    p.slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
+    return p;
+  }
+  function updatePositions(atMs) {
+    state.aircraft.forEach((p) => locate(p, atMs));
   }
 
   function rememberTrail(a, nowMs) {
@@ -355,6 +390,13 @@
   }
 
   function render() {
+    updatePositions(Date.now());
+    // A shared link names a plane; pick it once the first update arrives.
+    if (state.wanted && state.updatedAt) {
+      if (state.aircraft.some((a) => a.hex === state.wanted)) state.selected = state.wanted;
+      else state.notice = 'The plane in that link has left the area.';
+      state.wanted = null;
+    }
     // Default to the plane highest in the sky until the reader picks one.
     if (!state.selected || !state.aircraft.some((a) => a.hex === state.selected)) {
       const best = state.aircraft.filter((a) => !a.onGround).sort((a, b) => b.el - a.el)[0];
@@ -363,6 +405,7 @@
     renderStatus();
     renderChart();
     renderCard();
+    renderNext();
     renderList();
   }
 
@@ -374,13 +417,13 @@
     if (state.error) {
       el.className = 'status error';
       el.textContent = `The data source didn't answer (${state.error}). ` +
-        (time ? `The positions shown are from ${time} and are drawn in gray.` : 'Trying again in 10 seconds.');
+        (time ? `The positions shown are from ${time} and turn gray after a minute.` : 'Trying again in 10 seconds.');
       return;
     }
     el.className = 'status';
     if (!time) { el.textContent = 'Loading live positions.'; return; }
     el.textContent = `Updated ${time}. ${air} in the air within ${NM} nautical miles, ${gnd} on the ground` +
-      (state.showGround ? '.' : ' (hidden).');
+      (state.showGround ? '.' : ' (hidden).') + (state.notice ? ` ${state.notice}` : '');
   }
 
   function size() {
@@ -406,7 +449,6 @@
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     svg.replaceChildren();
     const cx = w / 2, cy = h / 2, R = w / 2 - 34;
-    const stale = !!state.error;
     const rot = state.view === 'sky' && state.heading != null ? state.heading : 0;
 
     // Position on screen for a lat/lon, in the current view.
@@ -471,36 +513,29 @@
     const boxes = [];
     let hiddenLabels = 0;
 
-    // Trails and age circles first, so marks sit on top.
+    // Trails first, so marks sit on top. Each trail runs from past reports to where the plane is now.
     planes.forEach((p) => {
-      const trail = state.trails.get(p.hex) || [];
+      const trail = (state.trails.get(p.hex) || []).concat(p.moved ? [{ lat: p.lat, lon: p.lon }] : []);
       if (trail.length > 1) {
-        const pts = trail.map((t) => place(t.lat, t.lon, p.ft)).map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
+        const pts = trail.map((t) => place(t.lat, t.lon, p.ftNow)).map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
         g.append(svgEl('polyline', { points: pts, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '2 3' }));
-      }
-      if (state.view === 'map' && p.gs && p.age > 3) {
-        const r = R * (p.gs * 1.15078 * p.age / 3600) / MAP_MI;
-        if (r > 5) {
-          const q = place(p.raw.lat, p.raw.lon);
-          g.append(svgEl('circle', { cx: q.x, cy: q.y, r, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '3 4' }));
-        }
       }
     });
 
     order.slice().reverse().forEach((p) => {
-      const q = place(p.raw.lat, p.raw.lon, p.ft);
+      const q = place(p.lat, p.lon, p.ftNow);
       // Point the mark along the track as it appears in this view.
       let angle = 0;
       if (p.track != null) {
         if (state.view === 'map') angle = p.track;
         else {
-          const ahead = project(p.raw.lat, p.raw.lon, p.track, Math.max(p.gs || 100, 50) * 0.514 * 30);
-          const q2 = place(ahead.lat, ahead.lon, p.ft);
+          const ahead = project(p.lat, p.lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
+          const q2 = place(ahead.lat, ahead.lon, p.ftNow);
           angle = deg(Math.atan2(q2.x - q.x, -(q2.y - q.y)));
         }
       }
       const isSel = p.hex === state.selected;
-      const old = stale || p.age > STALE_S;
+      const old = p.since > STALE_S || !p.moved;
       const color = old || p.onGround ? muted : accent;
       const mark = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex, style: 'cursor:pointer' });
       mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
@@ -517,7 +552,7 @@
     const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     g.querySelectorAll('text').forEach((t) => { const b = t.getBBox(); boxes.push({ x: b.x - 2, y: b.y, w: b.width + 4, h: b.height }); });
     order.forEach((p) => {
-      const q = place(p.raw.lat, p.raw.lon, p.ft);
+      const q = place(p.lat, p.lon, p.ftNow);
       const l1 = p.callsign || p.raw.r || p.hex.toUpperCase();
       const l2 = p.onGround ? 'ground' : `${p.altFt != null ? fmt(p.altFt) + ' ft' : '?'} · ${p.gs != null ? fmt(p.gs) + ' kt' : '?'}`;
       const isSel = p.hex === state.selected;
@@ -546,9 +581,9 @@
     const hidden = hiddenLabels ? ` ${hiddenLabels} labels are hidden where they would overlap; the list below has every aircraft.` : '';
     if (state.view === 'sky') {
       const top = state.heading != null ? `the direction you're facing (${Math.round(state.heading)}° ${compassShort(state.heading)})` : 'north';
-      legend.textContent = `The center is straight overhead and the outer circle is the horizon. The top is ${top}. Gray marks are positions more than ${STALE_S} seconds old.${hidden}`;
+      legend.textContent = `The center is straight overhead and the outer circle is the horizon. The top is ${top}. Each mark is where the plane should be now, moved forward from its last report. Gray marks are where a plane was last heard, more than a minute ago.${hidden}`;
     } else {
-      legend.textContent = `North is up. The dot is you; squares are airports. A dashed circle shows how far a plane could have flown since its last report.${hidden}`;
+      legend.textContent = `North is up. The dot is you; squares are airports. Each mark is where the plane should be now, and the dotted line behind it is where it has been. Gray marks are where a plane was last heard, more than a minute ago.${hidden}`;
     }
   }
 
@@ -568,7 +603,8 @@
       ['Speed', p.gs != null ? `${fmt(p.gs)} knots (${fmt(p.gs * 1.15078)} mph)` : 'Not in feed'],
       ['Distance', `${mi.toFixed(1)} miles along the ground, ${slantMi.toFixed(1)} miles in a straight line`],
       ['Route', 'Not in this feed. Planes don\'t broadcast where they\'re going.'],
-      ['Position', `${Math.round(p.age)} seconds old, ${src}`],
+      ['Position', `Last heard ${Math.round(p.since) === 1 ? '1 second' : `${Math.round(p.since)} seconds`} ago, ${src}. ` +
+        (p.moved ? 'Shown moved forward to where it should be now.' : 'Shown where it was heard.')],
     ];
     if (p.raw.squawk) rows.push(['Squawk', p.raw.squawk]);
     if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency status', p.raw.emergency]);
@@ -605,7 +641,78 @@
       const dd = document.createElement('dd'); dd.textContent = v;
       dl.append(dt, dd);
     });
-    card.append(dl);
+    const share = document.createElement('button');
+    share.type = 'button';
+    share.textContent = 'Share this plane';
+    share.style.marginTop = '16px';
+    share.addEventListener('click', () => sharePlane(p, share));
+    card.append(dl, share);
+  }
+
+  // A link that opens this page on the same place with this plane picked. "My location" is
+  // never put in a link.
+  async function sharePlane(p, btn) {
+    const url = new URL(location.pathname, location.origin);
+    if (state.obs.id !== 'me' && state.obs.id !== PLACES[0].id) url.searchParams.set('at', state.obs.id);
+    url.searchParams.set('plane', p.hex);
+    try {
+      if (navigator.share) { await navigator.share({ title: nameOf(p), text: `${nameOf(p)}, ${typeOf(p)}. Look up now.`, url: url.href }); return; }
+      await navigator.clipboard.writeText(url.href);
+      btn.textContent = 'Link copied';
+    } catch (err) {
+      if (err.name !== 'AbortError') btn.textContent = 'Couldn\'t share this link';
+    }
+  }
+
+  // Planes on course to pass high over the observer soon, if each keeps its heading, speed and climb.
+  function upcoming() {
+    const out = [];
+    state.aircraft.forEach((p) => {
+      if (!p.moved || p.since > STALE_S || p.gs < 60) return;
+      const rate = p.raw.baro_rate ?? p.raw.geom_rate;
+      let best = { el: p.el, t: 0 };
+      for (let t = 15; t <= NEXT_S; t += 15) {
+        const ft = p.ftNow + (typeof rate === 'number' ? rate * t / 60 : 0);
+        if (ft <= 0) break;
+        const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * t);
+        const { d, brg } = geo(state.obs, to.lat, to.lon);
+        const el = elevation(d, ft * 0.3048);
+        if (el > best.el) best = { el, t, brg, ft };
+      }
+      // Skip planes already at their highest, and ones still rising when the look-ahead ends.
+      if (best.t >= 30 && best.t < NEXT_S && best.el >= NEXT_MIN_EL) out.push({ p, ...best });
+    });
+    return out.sort((a, b) => a.t - b.t).slice(0, 3);
+  }
+
+  function renderNext() {
+    const ul = $('next');
+    ul.replaceChildren();
+    const list = upcoming();
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'muted small';
+      li.style.padding = '10px 4px';
+      li.textContent = state.updatedAt ? 'No plane is on course to pass high over you in the next 10 minutes.' : 'Waiting for the first update.';
+      ul.append(li);
+      return;
+    }
+    list.forEach(({ p, t, el, brg, ft }) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.hex = p.hex;
+      if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = `${t < 90 ? 'In about a minute' : `In about ${Math.round(t / 60)} minutes`}: ${nameOf(p)}`;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = `${typeOf(p)}. Should pass ${Math.round(el)}° up, toward the ${compassWord(brg)}, at about ${fmt(Math.round(ft / 100) * 100)} ft.`;
+      b.append(who, meta);
+      li.append(b);
+      ul.append(li);
+    });
   }
 
   function renderList() {
@@ -637,7 +744,7 @@
         p.gs != null ? `${fmt(p.gs)} kt` : null,
         `${(p.d / M_PER_MI).toFixed(1)} mi`,
         where,
-        `${Math.round(p.age)} s old`,
+        `heard ${Math.round(p.since)} s ago`,
       ].filter(Boolean).join(' · ');
       b.append(who, meta);
       li.append(b);
@@ -649,10 +756,12 @@
   // Field of view across the long side of a typical phone main camera. An estimate; the
   // drag-to-align gesture corrects what this and the compass get wrong.
   const CAMERA_LONG_FOV = 67;
+  const RETICLE_R = 40;        // the center circle, in pixels
   const arSvg = $('arsvg'), video = $('cam');
   const ar = {
     stream: null, listening: false, axes: null, absolute: false, offset: null, accuracy: null,
     nudgeAz: 0, nudgeEl: 0, frame: 0, F: 400, drag: null, camMsg: '', motionMsg: '',
+    center: null, aimedOnce: false, held: null,
   };
   try {
     const saved = JSON.parse(localStorage.getItem('skyviu-align') || 'null');
@@ -666,6 +775,23 @@
   const wrap = (d) => ((d % 360) + 360) % 360;
   const angDiff = (a, b) => ((a - b + 540) % 360) - 180;   // a minus b, in -180..180
   const azOf = (v) => wrap(deg(Math.atan2(v[0], v[1])));
+
+  // Where the sun is, from NOAA's general solar position equations. Within half a degree of the
+  // ephem library in tests. Ignores refraction, which lifts the sun about half a degree near the horizon.
+  function sunAt(date, lat, lon) {
+    const doy = Math.floor((date - Date.UTC(date.getUTCFullYear(), 0, 1)) / 864e5) + 1;
+    const hr = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+    const g = 2 * Math.PI / 365 * (doy - 1 + (hr - 12) / 24);
+    const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+    const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) +
+      0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const ha = rad((hr * 60 + eqt + 4 * lon) / 4 - 180);
+    const phi = rad(lat);
+    const cosZ = Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.cos(ha);
+    const el = 90 - deg(Math.acos(Math.max(-1, Math.min(1, cosZ))));
+    const az = wrap(deg(Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(phi) - Math.tan(decl) * Math.cos(phi))) + 180);
+    return { az, el };
+  }
 
   // Screen axes in east-north-up coordinates, from the W3C device orientation angles.
   function deviceAxes(alpha, beta, gamma) {
@@ -753,8 +879,11 @@
     try { localStorage.setItem('skyviu-align', JSON.stringify({ az: ar.nudgeAz, el: ar.nudgeEl })); } catch { /* not saved */ }
   }
 
+  function setText(el, s) { if (el.textContent !== s) el.textContent = s; }
+
   function drawAR() {
     if (state.view !== 'camera') return;
+    updatePositions(Date.now());
     const box = arSvg.getBoundingClientRect();
     const W = box.width || 343, H = box.height || 500;   // unrounded, so 16px text stays 16px
     arSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -766,16 +895,24 @@
     } else ar.F = (Math.max(W, H) / 2) / half;
     const F = ar.F;
 
-    const nudge = $('arnudge');
+    const sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
+    const sunUp = sun.el > 0;
     const parts = [];
     if (Math.round(ar.nudgeAz)) parts.push(`${Math.abs(Math.round(ar.nudgeAz))}° ${ar.nudgeAz < 0 ? 'right' : 'left'}`);
     if (Math.round(ar.nudgeEl)) parts.push(`${Math.abs(Math.round(ar.nudgeEl))}° ${ar.nudgeEl > 0 ? 'up' : 'down'}`);
-    nudge.textContent = parts.length ? `Labels moved ${parts.join(', ')}.` : 'Drag the picture to line labels up with what you see.';
+    setText($('arnudge'), (parts.length ? `Labels moved ${parts.join(', ')}. ` : '') + (sunUp
+      ? 'Labels off? Put the sun in the center circle and tap Line up on the sun. Look at the screen, not at the sun.'
+      : 'Labels off? Tap a label, put that plane in the center circle, then tap Line up. You can also drag the picture.'));
 
-    const hint = $('arhint');
+    const hint = $('arhint'), arcard = $('arcard');
+    const sunBtn = $('alignsun'), planeBtn = $('alignplane');
+    sunBtn.hidden = !sunUp || !ar.axes;
     if (!ar.axes) {
-      hint.textContent = ar.motionMsg || ar.camMsg ||
-        'Waiting for the compass. If nothing happens, move your phone in a figure eight.';
+      planeBtn.hidden = true;
+      arcard.hidden = true;
+      ar.center = null;
+      setText(hint, ar.motionMsg || ar.camMsg ||
+        'Waiting for the compass. If nothing happens, move your phone in a figure eight.');
       return;
     }
     const { f, up } = ar.axes;
@@ -818,26 +955,40 @@
       const q = project(i * 45, 0);
       if (onScreen(q, -10)) chips.push(chip(q.x, q.y + 30, c, { anchor: 'middle', bold: c === 'N' }));
     });
+    const sq = sun.el > -1 ? project(sun.az, sun.el) : null;
+    if (onScreen(sq, 20)) {
+      g.append(svgEl('circle', { cx: sq.x, cy: sq.y, r: 16, fill: 'none', stroke: white, 'stroke-width': 5 }));
+      g.append(svgEl('circle', { cx: sq.x, cy: sq.y, r: 16, fill: 'none', stroke: text, 'stroke-width': 2 }));
+      chips.push(chip(sq.x, sq.y + 44, 'Sun', { anchor: 'middle' }));
+    }
 
     const planes = visible();
-    const sel = planes.find((p) => p.hex === state.selected);
     const placed = planes.map((p) => ({ p, q: project(p.brg, p.el) })).filter((o) => onScreen(o.q, 40));
+    // The center circle names whatever plane it's on, without a tap.
+    const cx = W / 2, cy = H / 2;
+    const fromCenter = (q) => Math.hypot(q.x - cx, q.y - cy);
+    const aimed = placed.filter(({ p, q }) => !p.onGround && fromCenter(q) <= RETICLE_R)
+      .sort((a, b) => fromCenter(a.q) - fromCenter(b.q))[0];
+    // A plane picked by tap holds until the circle reaches it, the labels are lined up on it,
+    // or the reader taps empty sky.
+    if (ar.held && (ar.held !== state.selected || (aimed && aimed.p.hex === ar.held))) ar.held = null;
+    if (aimed && !ar.held) {
+      ar.aimedOnce = true;
+      if (aimed.p.hex !== state.selected) { state.selected = aimed.p.hex; renderCard(); renderNext(); renderList(); }
+    }
+    const sel = planes.find((p) => p.hex === state.selected);
     placed.sort((a, b) => (b.p.hex === state.selected) - (a.p.hex === state.selected) || a.p.d - b.p.d);
 
-    // Rings first: how far each plane could have flown since its last report.
-    placed.forEach(({ p, q }) => {
-      if (!p.gs || p.onGround) return;
-      const r = F * Math.tan(Math.atan2(p.gs * 0.5144 * p.age, p.slant));
-      if (r > 16 && r < Math.max(W, H)) {
-        g.append(svgEl('circle', { cx: q.x, cy: q.y, r, fill: 'none', stroke: white, 'stroke-width': 3, 'stroke-dasharray': '4 5' }));
-        g.append(svgEl('circle', { cx: q.x, cy: q.y, r, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '4 5' }));
-      }
-    });
-    const taken = chips.map(({ x, y, w, h }) => ({ x, y, w, h }));
+    g.append(svgEl('circle', { cx, cy, r: RETICLE_R, fill: 'none', stroke: white, 'stroke-width': 5 }));
+    g.append(svgEl('circle', { cx, cy, r: RETICLE_R, fill: 'none', stroke: aimed && aimed.p.hex === state.selected ? accent : muted, 'stroke-width': 2 }));
+
+    // Labels keep clear of the center circle.
+    const taken = chips.map(({ x, y, w, h }) => ({ x, y, w, h }))
+      .concat([{ x: cx - RETICLE_R, y: cy - RETICLE_R, w: 2 * RETICLE_R, h: 2 * RETICLE_R }]);
     const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     placed.slice().reverse().forEach(({ p, q }) => {
       const isSel = p.hex === state.selected;
-      const old = !!state.error || p.age > STALE_S;
+      const old = p.since > STALE_S || !p.moved;
       const color = old || p.onGround ? muted : accent;
       const m = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex });
       m.append(svgEl('circle', { r: 24, fill: 'transparent' }));
@@ -873,26 +1024,48 @@
 
     // The hint line: where to turn for the selected plane, or what the view is showing.
     const fAz = wrap(azOf(f) + offset), fEl = deg(Math.asin(Math.max(-1, Math.min(1, f[2])))) - ar.nudgeEl;
-    if (Math.abs(f[2]) < 0.95) chip(W / 2, H - 18, `Facing ${compassShort(fAz)}, ${Math.round(fAz)}°`, { anchor: 'middle' });
+    ar.center = { az: fAz, el: fEl };
+
+    // The picked plane, inside the camera view so you don't have to scroll away from the sky.
+    arcard.hidden = !sel;
+    if (sel) {
+      setText($('arname'), `${nameOf(sel)} · ${typeOf(sel)}`);
+      setText($('armeta'), sel.onGround ? `On the ground · ${(sel.d / M_PER_MI).toFixed(1)} mi` :
+        `${sel.altFt != null ? fmt(sel.altFt) + ' ft' : 'Altitude unknown'} · ${(sel.d / M_PER_MI).toFixed(1)} mi · ` +
+        `${Math.round(Math.max(sel.el, 0))}° up ${compassShort(sel.brg)} · heard ${Math.round(sel.since)} s ago`);
+    }
+    planeBtn.hidden = !sel || sel.onGround;
+    if (sel) setText(planeBtn, `Line up on ${sel.callsign || sel.raw.r || sel.hex.toUpperCase()}`);
+    const lift = sel ? arcard.offsetHeight + 12 : 0;
+    if (Math.abs(f[2]) < 0.95) chip(W / 2, H - 18 - lift, `Facing ${compassShort(fAz)}, ${Math.round(fAz)}°`, { anchor: 'middle' });
+
     const out = planes.length - placed.length;
     let msg = '';
-    if (!msg && sel) {
-      const selShown = placed.some((o) => o.p.hex === sel.hex);
-      if (selShown) msg = `${nameOf(sel)}: position ${Math.round(sel.age)} s old.`;
-      else {
-        const dAz = angDiff(sel.brg, fAz), dEl = sel.el - fEl;
-        const moves = [];
-        if (Math.abs(dAz) > 15) moves.push(Math.abs(dAz) > 150 ? 'turn around' : `turn ${dAz > 0 ? 'right' : 'left'}`);
-        if (Math.abs(dEl) > 12) moves.push(`tilt ${dEl > 0 ? 'up' : 'down'}`);
-        msg = `To find ${nameOf(sel)}, ${moves.join(' and ') || 'hold steady'}.`;
-      }
-    } else if (!msg) msg = planes.length ? 'Point your phone at the sky.' : 'No aircraft in range right now.';
-    if (ar.accuracy != null) msg += ` Compass accurate to about ${Math.round(ar.accuracy)}°.`;
-    hint.textContent = msg;
+    if (sel && !placed.some((o) => o.p.hex === sel.hex)) {
+      const dAz = angDiff(sel.brg, fAz), dEl = sel.el - fEl;
+      const moves = [];
+      if (Math.abs(dAz) > 15) moves.push(Math.abs(dAz) > 150 ? 'turn around' : `turn ${dAz > 0 ? 'right' : 'left'}`);
+      if (Math.abs(dEl) > 12) moves.push(`tilt ${dEl > 0 ? 'up' : 'down'}`);
+      msg = `To find ${nameOf(sel)}, ${moves.join(' and ') || 'hold steady'}.`;
+    } else if (ar.held && sel) msg = `Holding ${nameOf(sel)}. Tap empty sky to let the center circle pick again.`;
+    else if (!planes.length) msg = 'No aircraft in range right now.';
+    else if (!ar.aimedOnce) msg = 'Put a plane in the center circle to name it, or tap one.';
+    if (ar.accuracy != null) msg += `${msg ? ' ' : ''}Compass accurate to about ${Math.round(ar.accuracy)}°.`;
+    setText(hint, msg);
 
-    $('legend').textContent = (ar.camMsg ? ar.camMsg + ' ' : '') + `Rings mark where each plane was last reported; the dashed circle shows how far it could have flown since. ` +
-      `Phone compasses can be off by several degrees, more near metal and cars, so drag the picture to line a label up with a plane you can see. ` +
-      (out ? `${out} more are out of view.` : '') + (hidden ? ` ${hidden} labels are hidden where they would overlap.` : '');
+    setText($('legend'), (ar.camMsg ? ar.camMsg + ' ' : '') + 'Rings mark where each plane should be now, moved forward from its last report. ' +
+      'Phone compasses can be off by several degrees, more near metal and cars. ' +
+      (out ? `${out} more are out of view.` : '') + (hidden ? ` ${hidden} labels are hidden where they would overlap.` : ''));
+  }
+
+  // Shift the labels so the object in the center circle lines up with where it should be.
+  function alignOn(az, el) {
+    if (!ar.center) return;
+    ar.nudgeAz += angDiff(az, ar.center.az);
+    ar.nudgeEl += ar.center.el - el;
+    ar.held = null;
+    saveAlign();
+    drawAR();
   }
 
   // Drag to align; tap to pick a plane.
@@ -917,36 +1090,54 @@
     ar.drag = null;
     if (d.moved) { saveAlign(); drawAR(); return; }
     const hit = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.closest && el.closest('#arsvg [data-hex]'));
-    if (hit) select(hit.closest('[data-hex]').getAttribute('data-hex'));
+    if (hit) {
+      ar.held = hit.closest('[data-hex]').getAttribute('data-hex');
+      select(ar.held);
+    } else if (ar.held) { ar.held = null; drawAR(); }
   };
   arBox.addEventListener('pointerup', endDrag);
   arBox.addEventListener('pointercancel', (e) => { if (ar.drag && ar.drag.id === e.pointerId) ar.drag = null; });
   $('realign').addEventListener('click', () => { ar.nudgeAz = 0; ar.nudgeEl = 0; saveAlign(); drawAR(); });
+  $('alignsun').addEventListener('click', () => {
+    const s = sunAt(new Date(), state.obs.lat, state.obs.lon);
+    alignOn(s.az, s.el);
+  });
+  $('alignplane').addEventListener('click', () => {
+    const p = state.aircraft.find((a) => a.hex === state.selected);
+    if (p) { updatePositions(Date.now()); alignOn(p.brg, p.el); }
+  });
   video.addEventListener('loadedmetadata', () => drawAR());
 
   // ---------- interaction ----------
   function select(hex) {
     state.selected = hex;
+    state.notice = '';
     render();
   }
   svg.addEventListener('click', (e) => {
     const g = e.target.closest('[data-hex]');
     if (g) select(g.getAttribute('data-hex'));
   });
-  $('list').addEventListener('click', (e) => {
+  ['list', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button[data-hex]');
     if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : svg).scrollIntoView({ block: 'nearest' }); }
-  });
+  }));
 
   const placeSel = $('place');
   PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));
   placeSel.addEventListener('change', () => {
     if (placeSel.value === 'me') return;
+    state.wanted = null;
     setObserver(PLACES.find((p) => p.id === placeSel.value));
   });
   function setObserver(obs) {
     state.obs = obs;
     state.selected = null;
+    state.notice = '';
+    // Keep the address shareable: listed places go in it, "My location" never does.
+    const url = new URL(location.pathname, location.origin);
+    if (obs.id !== 'me' && obs.id !== PLACES[0].id) url.searchParams.set('at', obs.id);
+    history.replaceState(null, '', url);
     state.aircraft = [];
     state.trails.clear();
     state.updatedAt = null;
@@ -1036,8 +1227,13 @@
   let resizeTimer = 0;
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 150); });
 
-  render();
-  schedule();
+  // Links can name a listed place (?at=KSFO) and a plane (?plane=a1b2c3).
+  const params = new URLSearchParams(location.search);
+  const linkedPlane = (params.get('plane') || '').toLowerCase();
+  if (/^~?[0-9a-f]{6}$/.test(linkedPlane)) state.wanted = linkedPlane;
+  const linkedPlace = PLACES.find((p) => p.id === params.get('at'));
+  if (linkedPlace) placeSel.value = linkedPlace.id;
+  setObserver(linkedPlace || PLACES[0]);
 })();
 </script>
 </body>
