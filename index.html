@@ -77,6 +77,7 @@
 
   ul.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
   ul.list li { border-bottom: 1px solid var(--line); }
+  #also li { padding: 10px 4px; }
   ul.list button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; padding: 10px 4px; background: var(--bg); }
   ul.list button[aria-current="true"] .who { color: var(--accent); }
   ul.next button { display: grid; grid-template-columns: 72px 1fr; align-items: center; }
@@ -124,7 +125,10 @@
     <button id="showall" type="button" aria-pressed="false">Show all planes in range</button>
   </div>
 
-  <h2>Next to come into view</h2>
+  <h2>Also in the sky</h2>
+  <ul id="also" class="list"></ul>
+
+  <h2>Next planes to come into view</h2>
   <ul id="next" class="list next"></ul>
   <p class="muted small" style="margin-top:8px">If each plane flies straight. Planes turning to land often won't.</p>
 
@@ -140,6 +144,7 @@
       <li>It's more than 15° from the sun.</li>
       <li>Its position is less than a minute old.</li>
     </ul>
+    <p>The Moon counts when it's 10° up, and by day only when it's more than a sliver. Venus counts from sunset, Mars, Jupiter and Saturn once the sky is dark. The ISS and China's Tiangong station count when your sky is dark but sunlight still reaches them, which is usually in the hours after sunset or before sunrise.</p>
     <p>These cutoffs are estimates. Haze, clouds, contrails and your eyes all change the answer.</p>
     <h3>What this data can't see</h3>
     <ul>
@@ -152,7 +157,7 @@
   </details>
 
   <footer>
-    Made by <a href="https://natwong.dev/">Nat Wong</a>. Aircraft data from <a href="https://www.adsb.lol/">adsb.lol</a>, ODbL 1.0. Not for navigation.
+    Made by <a href="https://natwong.dev/">Nat Wong</a>. Aircraft data from <a href="https://www.adsb.lol/">adsb.lol</a>, ODbL 1.0. Station orbits from <a href="https://celestrak.org/">CelesTrak</a>. Moon and planets from Paul Schlyter's method. Not for navigation.
   </footer>
 </main>
 
@@ -236,6 +241,7 @@
   // A7 the rotor of a Robinson R44.
   const SPAN_M = { A1: 11, A2: 21, A3: 35, A4: 38, A5: 62, A6: 10, A7: 10, B1: 15, B2: 15, B4: 10, B6: 3 };
   const SMALL = new Set(['A1', 'A6', 'A7', 'B1', 'B4', 'B6']);
+  const STATIONS = { 25544: 'ISS', 48274: 'Tiangong' };   // by NORAD catalog number
 
   const $ = (id) => document.getElementById(id);
   const svg = $('sky');
@@ -252,6 +258,8 @@
     selected: null,
     picked: false,           // the reader chose the selected plane
     sun: { az: 0, el: -90 },
+    stations: [],            // [{name, rec}] with SGP4 records
+    passes: null,
     next: [],
     wanted: null,            // plane named in a shared link, picked once data arrives
     notice: '',
@@ -468,6 +476,7 @@
     renderHead();
     renderCard();
     renderNext();
+    renderAlso();
   }
 
   function renderStatus() {
@@ -560,6 +569,32 @@
       g.append(svgEl('circle', { cx: s.x, cy: s.y, r: 10, fill: 'none', stroke: text, 'stroke-width': 2 }));
       g.append(svgEl('text', { x: s.x, y: s.y + 30, fill: muted, 'text-anchor': 'middle' }, 'Sun'));
     }
+    // The Moon, planets and stations you can see (all that are up, when showing everything).
+    const bodyBoxes = [...g.querySelectorAll('text')].map((t) => { const r = t.getBBox(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+    const bodies = skyBodies(new Date()).filter((b) => b.el >= 0 && (b.ok || state.showAll));
+    bodies.forEach((b) => { const q = at(b.az, b.el), r = b.kind === 'moon' ? 12 : 6; bodyBoxes.push({ x: q.x - r, y: q.y - r, w: 2 * r, h: 2 * r }); });
+    bodies.forEach((b) => {
+      const q = at(b.az, b.el), c = b.ok ? text : muted;
+      if (b.kind === 'moon') {
+        const t = at(towardSun(b, state.sun).az, towardSun(b, state.sun).el);
+        g.append(moonGlyph(q.x, q.y, 12, deg(Math.atan2(t.x - q.x, -(t.y - q.y))), b.lit, c));
+      } else if (b.kind === 'station') {
+        g.append(svgEl('rect', { x: q.x - 5, y: q.y - 5, width: 10, height: 10, fill: c, transform: `rotate(45 ${q.x.toFixed(1)} ${q.y.toFixed(1)})` }));
+      } else g.append(svgEl('circle', { cx: q.x, cy: q.y, r: 4, fill: c }));
+      // Name below, above, right or left: the first spot clear of other names and marks.
+      const t = svgEl('text', { x: 0, y: 0, fill: c }, b.name);
+      g.append(t);
+      const tw = t.getBBox().width, gap = b.kind === 'moon' ? 15 : 9;
+      const spot = [
+        { x: q.x - tw / 2, y: q.y + gap }, { x: q.x - tw / 2, y: q.y - gap - 20 },
+        { x: q.x + gap + 2, y: q.y - 10 }, { x: q.x - gap - 2 - tw, y: q.y - 10 },
+      ].map((p) => ({ ...p, w: tw, h: 20 }))
+        .find((p) => !bodyBoxes.some((o) => p.x < o.x + o.w && p.x + p.w > o.x && p.y < o.y + o.h && p.y + p.h > o.y));
+      if (!spot) { t.remove(); return; }
+      t.setAttribute('x', spot.x.toFixed(1));
+      t.setAttribute('y', (spot.y + 15).toFixed(1));
+      bodyBoxes.push(spot);
+    });
 
     const planes = visible();
     const order = planes.slice().sort((a, b) => (b.hex === state.selected) - (a.hex === state.selected) || byEase(a, b));
@@ -859,6 +894,349 @@
     return { az, el };
   }
 
+  // ---------- the Moon, planets and space stations ----------
+  // Moon and planets from Paul Schlyter's "How to compute planetary positions" (stjarnhimlen.se),
+  // good to a few arcminutes. Space stations from the SGP4 model (Vallado et al., "Revisiting
+  // Spacetrack Report #3", 2006), near-Earth orbits only, which covers both stations.
+  const sind = (x) => Math.sin(rad(x)), cosd = (x) => Math.cos(rad(x));
+  const daysJ2000 = (date) => date / 864e5 + 2440587.5 - 2451543.5;   // Schlyter's day 0 is 1999 Dec 31, 0h UT
+  // Local sidereal time in degrees.
+  function siderealDeg(date, lon) {
+    const jd = date / 864e5 + 2440587.5;
+    return wrap(280.46061837 + 360.98564736629 * (jd - 2451545) + lon);
+  }
+  function kepler(M, e) {
+    let E = M + deg(e * sind(M) * (1 + e * cosd(M)));
+    for (let i = 0; i < 8; i++) E -= (E - deg(e * sind(E)) - M) / (1 - e * cosd(E));
+    return E;
+  }
+  // Heliocentric (or for the Moon, geocentric) ecliptic x, y, z from orbital elements.
+  function orbit(N, i, w, a, e, M) {
+    const E = kepler(wrap(M), e);
+    const xv = a * (cosd(E) - e), yv = a * Math.sqrt(1 - e * e) * sind(E);
+    const v = deg(Math.atan2(yv, xv)), r = Math.hypot(xv, yv);
+    return [
+      r * (cosd(N) * cosd(v + w) - sind(N) * sind(v + w) * cosd(i)),
+      r * (sind(N) * cosd(v + w) + cosd(N) * sind(v + w) * cosd(i)),
+      r * sind(v + w) * sind(i),
+    ];
+  }
+  // Usually brightest first, so they get a label when names crowd.
+  const PLANETS = {
+    Venus: (d) => [76.6799 + 2.46590e-5 * d, 3.3946 + 2.75e-8 * d, 54.8910 + 1.38374e-5 * d, 0.723330, 0.006773 - 1.302e-9 * d, 48.0052 + 1.6021302244 * d],
+    Jupiter: (d) => [100.4542 + 2.76854e-5 * d, 1.3030 - 1.557e-7 * d, 273.8777 + 1.64505e-5 * d, 5.20256, 0.048498 + 4.469e-9 * d, 19.8950 + 0.0830853001 * d],
+    Mars: (d) => [49.5574 + 2.11081e-5 * d, 1.8497 - 1.78e-8 * d, 286.5016 + 2.92961e-5 * d, 1.523688, 0.093405 + 2.516e-9 * d, 18.6021 + 0.5240207766 * d],
+    Saturn: (d) => [113.6634 + 2.38980e-5 * d, 2.4886 - 1.081e-7 * d, 339.3939 + 2.97661e-5 * d, 9.55475, 0.055546 - 9.499e-9 * d, 316.9670 + 0.0334442282 * d],
+  };
+  // Ecliptic longitude and latitude to equatorial, then to azimuth and elevation for the observer.
+  function eclToEq(x, y, z, d) {
+    const ecl = 23.4393 - 3.563e-7 * d;
+    return [x, y * cosd(ecl) - z * sind(ecl), y * sind(ecl) + z * cosd(ecl)];
+  }
+  function eqToHorizon(xe, ye, ze, date, lat, lon) {
+    const ra = deg(Math.atan2(ye, xe)), dec = deg(Math.atan2(ze, Math.hypot(xe, ye)));
+    const ha = siderealDeg(date, lon) - ra;
+    const x = cosd(ha) * cosd(dec), y = sind(ha) * cosd(dec), z = sind(dec);
+    const xh = x * sind(lat) - z * cosd(lat), zh = x * cosd(lat) + z * sind(lat);
+    return { az: wrap(deg(Math.atan2(y, xh)) + 180), el: deg(Math.asin(Math.max(-1, Math.min(1, zh)))) };
+  }
+  function sunEcl(d) {
+    const w = 282.9404 + 4.70935e-5 * d, e = 0.016709 - 1.151e-9 * d, M = wrap(356.0470 + 0.9856002585 * d);
+    const E = kepler(M, e);
+    const xv = cosd(E) - e, yv = Math.sqrt(1 - e * e) * sind(E);
+    const lon = deg(Math.atan2(yv, xv)) + w, r = Math.hypot(xv, yv);
+    return { x: r * cosd(lon), y: r * sind(lon), lon: wrap(lon), M };
+  }
+  // Where each planet is in the observer's sky.
+  function planetsAt(date, lat, lon) {
+    const d = daysJ2000(date), sun = sunEcl(d);
+    const Mj = wrap(19.8950 + 0.0830853001 * d), Ms = wrap(316.9670 + 0.0334442282 * d);
+    const out = [];
+    for (const name in PLANETS) {
+      let [x, y, z] = orbit(...PLANETS[name](d));
+      // Jupiter and Saturn pull on each other enough to matter.
+      if (name === 'Jupiter' || name === 'Saturn') {
+        const r = Math.hypot(x, y, z);
+        let lo = deg(Math.atan2(y, x)), la = deg(Math.asin(z / r));
+        if (name === 'Jupiter') {
+          lo += -0.332 * sind(2 * Mj - 5 * Ms - 67.6) - 0.056 * sind(2 * Mj - 2 * Ms + 21) + 0.042 * sind(3 * Mj - 5 * Ms + 21) -
+            0.036 * sind(Mj - 2 * Ms) + 0.022 * cosd(Mj - Ms) + 0.023 * sind(2 * Mj - 3 * Ms + 52) - 0.016 * sind(Mj - 5 * Ms - 69);
+        } else {
+          lo += 0.812 * sind(2 * Mj - 5 * Ms - 67.6) - 0.229 * cosd(2 * Mj - 4 * Ms - 2) + 0.119 * sind(Mj - 2 * Ms - 3) +
+            0.046 * sind(2 * Mj - 6 * Ms - 69) + 0.014 * sind(Mj - 3 * Ms + 32);
+          la += -0.020 * cosd(2 * Mj - 4 * Ms - 2) + 0.018 * sind(2 * Mj - 6 * Ms - 49);
+        }
+        x = r * cosd(la) * cosd(lo); y = r * cosd(la) * sind(lo); z = r * sind(la);
+      }
+      const [xe, ye, ze] = eclToEq(x + sun.x, y + sun.y, z, d);
+      out.push({ name, ...eqToHorizon(xe, ye, ze, date, lat, lon) });
+    }
+    return out;
+  }
+  // The Moon from the observer's spot (it's close enough that this shifts it up to a degree),
+  // and how much of it is lit.
+  function moonAt(date, lat, lon) {
+    const d = daysJ2000(date), sun = sunEcl(d);
+    const N = 125.1228 - 0.0529538083 * d, w = 318.0634 + 0.1643573223 * d, M = wrap(115.3654 + 13.0649929509 * d);
+    const [x0, y0, z0] = orbit(N, 5.1454, w, 60.2666, 0.054900, M);
+    const Ms = sun.M, Ls = Ms + 282.9404 + 4.70935e-5 * d, Lm = M + w + N, D = Lm - Ls, F = Lm - N;
+    let r = Math.hypot(x0, y0, z0), lo = deg(Math.atan2(y0, x0)), la = deg(Math.asin(z0 / r));
+    lo += -1.274 * sind(M - 2 * D) + 0.658 * sind(2 * D) - 0.186 * sind(Ms) - 0.059 * sind(2 * M - 2 * D) -
+      0.057 * sind(M - 2 * D + Ms) + 0.053 * sind(M + 2 * D) + 0.046 * sind(2 * D - Ms) + 0.041 * sind(M - Ms) -
+      0.035 * sind(D) - 0.031 * sind(M + Ms) - 0.015 * sind(2 * F - 2 * D) + 0.011 * sind(M - 4 * D);
+    la += -0.173 * sind(F - 2 * D) - 0.055 * sind(M - F - 2 * D) - 0.046 * sind(M + F - 2 * D) + 0.033 * sind(F + 2 * D) + 0.017 * sind(2 * M + F);
+    r += -0.58 * cosd(M - 2 * D) - 0.46 * cosd(2 * D);
+    const [xe, ye, ze] = eclToEq(r * cosd(la) * cosd(lo), r * cosd(la) * sind(lo), r * sind(la), d);
+    // Move from the Earth's center to the observer, in Earth radii.
+    const lst = siderealDeg(date, lon);
+    const ox = cosd(lat) * cosd(lst), oy = cosd(lat) * sind(lst), oz = sind(lat);
+    const sky = eqToHorizon(xe - ox, ye - oy, ze - oz, date, lat, lon);
+    const elong = Math.acos(cosd(la) * cosd(lo - sun.lon));
+    return { name: 'Moon', ...sky, lit: (1 - Math.cos(elong)) / 2 };
+  }
+
+  // SGP4, near-Earth branch, WGS-72 constants as the model expects.
+  const RE_KM = 6378.135, XKE = 60 / Math.sqrt(RE_KM ** 3 / 398600.8);
+  const J2 = 0.001082616, J3OJ2 = -0.00000253881 / J2, J4 = -0.00000165597;
+  function sgp4Init(omm) {
+    const s = {
+      epoch: Date.parse(omm.EPOCH + 'Z'), bstar: omm.BSTAR, ecco: omm.ECCENTRICITY,
+      inclo: rad(omm.INCLINATION), nodeo: rad(omm.RA_OF_ASC_NODE), argpo: rad(omm.ARG_OF_PERICENTER), mo: rad(omm.MEAN_ANOMALY),
+    };
+    const no = omm.MEAN_MOTION * 2 * Math.PI / 1440;
+    const cosio = Math.cos(s.inclo), cosio2 = cosio * cosio, sinio = Math.sin(s.inclo);
+    const omeosq = 1 - s.ecco * s.ecco, rteosq = Math.sqrt(omeosq);
+    const ak = (XKE / no) ** (2 / 3);
+    const d1 = 0.75 * J2 * (3 * cosio2 - 1) / (rteosq * omeosq);
+    let del = d1 / (ak * ak);
+    const adel = ak * (1 - del * del - del * (1 / 3 + 134 * del * del / 81));
+    del = d1 / (adel * adel);
+    s.no = no / (1 + del);
+    const ao = (XKE / s.no) ** (2 / 3), po = ao * omeosq, posq = po * po, rp = ao * (1 - s.ecco);
+    s.con41 = 3 * cosio2 - 1; const con42 = 1 - 5 * cosio2;
+    s.isimp = rp < 220 / RE_KM + 1;
+    let sfour = 78 / RE_KM + 1, qzms24 = ((120 - 78) / RE_KM) ** 4;
+    const perige = (rp - 1) * RE_KM;
+    if (perige < 156) {
+      sfour = perige < 98 ? 20 : perige - 78;
+      qzms24 = ((120 - sfour) / RE_KM) ** 4;
+      sfour = sfour / RE_KM + 1;
+    }
+    const pinvsq = 1 / posq, tsi = 1 / (ao - sfour);
+    s.eta = ao * s.ecco * tsi;
+    const etasq = s.eta * s.eta, eeta = s.ecco * s.eta, psisq = Math.abs(1 - etasq);
+    const coef = qzms24 * tsi ** 4, coef1 = coef / psisq ** 3.5;
+    const cc2 = coef1 * s.no * (ao * (1 + 1.5 * etasq + eeta * (4 + etasq)) + 0.375 * J2 * tsi / psisq * s.con41 * (8 + 3 * etasq * (8 + etasq)));
+    s.cc1 = s.bstar * cc2;
+    const cc3 = s.ecco > 1e-4 ? -2 * coef * tsi * J3OJ2 * s.no * sinio / s.ecco : 0;
+    s.x1mth2 = 1 - cosio2;
+    s.cc4 = 2 * s.no * coef1 * ao * omeosq * (s.eta * (2 + 0.5 * etasq) + s.ecco * (0.5 + 2 * etasq) - J2 * tsi / (ao * psisq) *
+      (-3 * s.con41 * (1 - 2 * eeta + etasq * (1.5 - 0.5 * eeta)) + 0.75 * s.x1mth2 * (2 * etasq - eeta * (1 + etasq)) * Math.cos(2 * s.argpo)));
+    s.cc5 = 2 * coef1 * ao * omeosq * (1 + 2.75 * (etasq + eeta) + eeta * etasq);
+    const cosio4 = cosio2 * cosio2, temp1 = 1.5 * J2 * pinvsq * s.no, temp2 = 0.5 * temp1 * J2 * pinvsq, temp3 = -0.46875 * J4 * pinvsq * pinvsq * s.no;
+    s.mdot = s.no + 0.5 * temp1 * rteosq * s.con41 + 0.0625 * temp2 * rteosq * (13 - 78 * cosio2 + 137 * cosio4);
+    s.argpdot = -0.5 * temp1 * con42 + 0.0625 * temp2 * (7 - 114 * cosio2 + 395 * cosio4) + temp3 * (3 - 36 * cosio2 + 49 * cosio4);
+    const xhdot1 = -temp1 * cosio;
+    s.nodedot = xhdot1 + (0.5 * temp2 * (4 - 19 * cosio2) + 2 * temp3 * (3 - 7 * cosio2)) * cosio;
+    s.omgcof = s.bstar * cc3 * Math.cos(s.argpo);
+    s.xmcof = s.ecco > 1e-4 ? -(2 / 3) * coef * s.bstar / eeta : 0;
+    s.nodecf = 3.5 * omeosq * xhdot1 * s.cc1;
+    s.t2cof = 1.5 * s.cc1;
+    s.xlcof = -0.25 * J3OJ2 * sinio * (3 + 5 * cosio) / (Math.abs(cosio + 1) > 1.5e-12 ? 1 + cosio : 1.5e-12);
+    s.aycof = -0.5 * J3OJ2 * sinio;
+    s.delmo = (1 + s.eta * Math.cos(s.mo)) ** 3;
+    s.sinmao = Math.sin(s.mo);
+    s.x7thm1 = 7 * cosio2 - 1;
+    if (!s.isimp) {
+      const cc1sq = s.cc1 * s.cc1;
+      s.d2 = 4 * ao * tsi * cc1sq;
+      const temp = s.d2 * tsi * s.cc1 / 3;
+      s.d3 = (17 * ao + sfour) * temp;
+      s.d4 = 0.5 * temp * ao * tsi * (221 * ao + 31 * sfour) * s.cc1;
+      s.t3cof = s.d2 + 2 * cc1sq;
+      s.t4cof = 0.25 * (3 * s.d3 + s.cc1 * (12 * s.d2 + 10 * cc1sq));
+      s.t5cof = 0.2 * (3 * s.d4 + 12 * s.cc1 * s.d3 + 6 * s.d2 * s.d2 + 15 * cc1sq * (2 * s.d2 + cc1sq));
+    }
+    return s;
+  }
+  // Position in km, in the TEME frame, at a time.
+  function sgp4(s, date) {
+    const TAU = 2 * Math.PI, t = (date - s.epoch) / 60000, t2 = t * t;
+    const xmdf = s.mo + s.mdot * t, argpdf = s.argpo + s.argpdot * t, nodedf = s.nodeo + s.nodedot * t;
+    let argpm = argpdf, mm = xmdf, nodem = nodedf + s.nodecf * t2;
+    let tempa = 1 - s.cc1 * t, tempe = s.bstar * s.cc4 * t, templ = s.t2cof * t2;
+    if (!s.isimp) {
+      const delomg = s.omgcof * t, delm = s.xmcof * ((1 + s.eta * Math.cos(xmdf)) ** 3 - s.delmo);
+      mm = xmdf + delomg + delm; argpm = argpdf - delomg - delm;
+      const t3 = t2 * t, t4 = t3 * t;
+      tempa -= s.d2 * t2 + s.d3 * t3 + s.d4 * t4;
+      tempe += s.bstar * s.cc5 * (Math.sin(mm) - s.sinmao);
+      templ += s.t3cof * t3 + t4 * (s.t4cof + t * s.t5cof);
+    }
+    const am = (XKE / s.no) ** (2 / 3) * tempa * tempa;
+    const nm = XKE / am ** 1.5;
+    const em = Math.max(1e-6, s.ecco - tempe);
+    mm += s.no * templ;
+    const xlm = mm + argpm + nodem;
+    nodem %= TAU; argpm %= TAU;
+    const axnl = em * Math.cos(argpm), tmp = 1 / (am * (1 - em * em));
+    const aynl = em * Math.sin(argpm) + tmp * s.aycof;
+    const xl = xlm + tmp * s.xlcof * axnl;
+    const u = ((xl - nodem) % TAU + TAU) % TAU;
+    let eo1 = u, sineo1 = 0, coseo1 = 1;
+    for (let k = 0; k < 10; k++) {
+      sineo1 = Math.sin(eo1); coseo1 = Math.cos(eo1);
+      let step = (u - aynl * coseo1 + axnl * sineo1 - eo1) / (1 - coseo1 * axnl - sineo1 * aynl);
+      step = Math.max(-0.95, Math.min(0.95, step));
+      eo1 += step;
+      if (Math.abs(step) < 1e-12) break;
+    }
+    const ecose = axnl * coseo1 + aynl * sineo1, esine = axnl * sineo1 - aynl * coseo1;
+    const el2 = axnl * axnl + aynl * aynl, pl = am * (1 - el2), rl = am * (1 - ecose);
+    const betal = Math.sqrt(1 - el2), q = esine / (1 + betal);
+    const sinu = am / rl * (sineo1 - aynl - axnl * q), cosu = am / rl * (coseo1 - axnl + aynl * q);
+    let su = Math.atan2(sinu, cosu);
+    const sin2u = 2 * cosu * sinu, cos2u = 1 - 2 * sinu * sinu;
+    const temp1 = 0.5 * J2 / pl, temp2 = temp1 / pl;
+    const mrt = rl * (1 - 1.5 * temp2 * betal * s.con41) + 0.5 * temp1 * s.x1mth2 * cos2u;
+    su -= 0.25 * temp2 * s.x7thm1 * sin2u;
+    const xnode = nodem + 1.5 * temp2 * Math.cos(s.inclo) * sin2u;
+    const xinc = s.inclo + 1.5 * temp2 * Math.cos(s.inclo) * Math.sin(s.inclo) * cos2u;
+    const sinsu = Math.sin(su), cossu = Math.cos(su), snod = Math.sin(xnode), cnod = Math.cos(xnode);
+    const sini = Math.sin(xinc), cosi = Math.cos(xinc);
+    const k = mrt * RE_KM;
+    return [k * (-snod * cosi * sinsu + cnod * cossu), k * (cnod * cosi * sinsu + snod * cossu), k * sini * sinsu];
+  }
+  // A station as seen by the observer: direction, distance, and whether sunlight reaches it.
+  function stationAt(s, date, lat, lon) {
+    const [x, y, z] = sgp4(s, date);
+    // TEME to Earth-fixed: turn by the sidereal angle at Greenwich.
+    const g = rad(siderealDeg(date, 0));
+    const xf = x * Math.cos(g) + y * Math.sin(g), yf = -x * Math.sin(g) + y * Math.cos(g);
+    // Observer on the WGS-84 ellipsoid at sea level.
+    const f = 1 / 298.257223563, e2 = f * (2 - f), a = 6378.137;
+    const n = a / Math.sqrt(1 - e2 * sind(lat) ** 2);
+    const ox = n * cosd(lat) * cosd(lon), oy = n * cosd(lat) * sind(lon), oz = n * (1 - e2) * sind(lat);
+    const dx = xf - ox, dy = yf - oy, dz = z - oz;
+    const east = -sind(lon) * dx + cosd(lon) * dy;
+    const north = -sind(lat) * cosd(lon) * dx - sind(lat) * sind(lon) * dy + cosd(lat) * dz;
+    const up = cosd(lat) * cosd(lon) * dx + cosd(lat) * sind(lon) * dy + sind(lat) * dz;
+    const range = Math.hypot(east, north, up);
+    // Earth's shadow as a cylinder, which is close enough for a station a few hundred km up.
+    const d = daysJ2000(date), sun = sunEcl(d);
+    const [sx, sy, sz] = eclToEq(sun.x, sun.y, 0, d), sl = Math.hypot(sx, sy, sz);
+    const along = (x * sx + y * sy + z * sz) / sl;
+    const across = Math.hypot(x - along * sx / sl, y - along * sy / sl, z - along * sz / sl);
+    return {
+      az: wrap(deg(Math.atan2(east, north))), el: deg(Math.asin(up / range)), range,
+      sunlit: along > 0 || across > 6371,
+    };
+  }
+
+  // Can you see it with your eyes? Empty means yes; otherwise, why not. Estimates, like the
+  // plane cutoffs.
+  function bodyWhy(b, sun) {
+    if (b.el < 0) return 'Below the horizon.';
+    if (b.el < MIN_EL) return `Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`;
+    if (b.kind === 'moon') {
+      return sun.el > 0 && (b.lit < 0.1 || apart(b.az, b.el, sun.az, sun.el) < SUN_CLEAR) ? 'Too thin to pick out in daylight.' : '';
+    }
+    if (b.kind === 'station') {
+      if (sun.el > -6) return 'Only visible when your sky is dark.';
+      return b.sunlit ? '' : 'In the Earth\'s shadow, so it\'s dark.';
+    }
+    // Venus shows in twilight; the other planets need a dark sky.
+    return sun.el > (b.name === 'Venus' ? 0 : -6) ? 'The sky is too bright.' : '';
+  }
+  // The Moon, planets and stations at a moment, each with a yes or no for the eye.
+  function skyBodies(date) {
+    const { lat, lon } = state.obs;
+    const sun = sunAt(date, lat, lon);
+    const list = [{ kind: 'moon', ...moonAt(date, lat, lon) }]
+      .concat(planetsAt(date, lat, lon).map((p) => ({ kind: 'planet', ...p })))
+      .concat(state.stations.map((st) => ({ kind: 'station', name: st.name, ...stationAt(st.rec, date, lat, lon) })));
+    list.forEach((b) => { b.why = bodyWhy(b, sun); b.ok = !b.why; });
+    return list;
+  }
+  // The next pass you can see for each station, in the next 3 days.
+  function nextPasses() {
+    const { lat, lon } = state.obs, now = Date.now(), out = [];
+    state.stations.forEach((st) => {
+      let pass = null;
+      for (let t = now; t < now + 3 * 864e5; t += 30e3) {
+        const date = new Date(t);
+        const sun = sunAt(date, lat, lon);
+        if (sun.el > -6) { if (pass) break; continue; }
+        const b = { kind: 'station', ...stationAt(st.rec, date, lat, lon) };
+        const ok = !bodyWhy(b, sun);
+        if (ok && !pass) pass = { name: st.name, start: t, end: t, startAz: b.az, endAz: b.az, top: b.el };
+        else if (ok) { pass.end = t; pass.endAz = b.az; pass.top = Math.max(pass.top, b.el); }
+        else if (pass) break;
+      }
+      if (pass) out.push(pass);
+    });
+    return out.sort((a, b) => a.start - b.start);
+  }
+  async function loadOrbits() {
+    try {
+      const r = await fetch('/api/orbits');
+      const j = await r.json();
+      // Orbit data older than a week has drifted too far to trust.
+      state.stations = (j.objects || []).filter((o) => STATIONS[o.NORAD_CAT_ID] && Date.now() - Date.parse(o.EPOCH + 'Z') < 7 * 864e5)
+        .map((o) => ({ name: STATIONS[o.NORAD_CAT_ID], rec: sgp4Init(o) }));
+    } catch { state.stations = []; }
+    state.passes = null;
+    render();
+  }
+
+  // A little way from a body toward the sun, so a lit side can face the right way.
+  function towardSun(b, sun) {
+    const v = (az, el) => [cosd(el) * sind(az), cosd(el) * cosd(az), sind(el)];
+    const p = mix(v(b.az, b.el), v(sun.az, sun.el), 0.02);
+    return { az: azOf(p), el: deg(Math.asin(p[2])) };
+  }
+  // The Moon as it looks: the lit part white, the dark part gray, the lit side toward the sun.
+  function moonGlyph(x, y, r, angle, lit, stroke) {
+    const m = svgEl('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` });
+    m.append(svgEl('circle', { r, fill: '#4A5C70' }));
+    const rx = (r * Math.abs(1 - 2 * lit)).toFixed(2);
+    m.append(svgEl('path', {
+      d: `M0,${-r} A${r},${r} 0 0 1 0,${r} A${rx},${r} 0 0 ${lit < 0.5 ? 0 : 1} 0,${-r} Z`,
+      fill: '#FFFFFF', transform: `rotate(${(angle - 90).toFixed(0)})`,
+    }));
+    m.append(svgEl('circle', { r, fill: 'none', stroke, 'stroke-width': 2 }));
+    return m;
+  }
+
+  function renderAlso() {
+    const ul = $('also');
+    ul.replaceChildren();
+    const now = new Date();
+    if (!state.passes || state.passes.obs !== state.obs || now - state.passes.at > 60e3) {
+      state.passes = { obs: state.obs, at: now, list: nextPasses() };
+    }
+    const row = (who, meta) => {
+      const li = document.createElement('li');
+      const a = document.createElement('span'); a.className = 'who'; a.textContent = who;
+      const b = document.createElement('span'); b.className = 'meta'; b.textContent = meta;
+      li.append(a, b);
+      ul.append(li);
+    };
+    const where = (b) => `${Math.round(b.el)}° up ${compassShort(b.az)}`;
+    const up = skyBodies(now).filter((b) => b.ok);
+    up.forEach((b) => {
+      if (b.kind === 'moon') row('Moon', `${Math.round(b.lit * 100)}% lit · ${where(b)}`);
+      else if (b.kind === 'planet') row(b.name, `${where(b)} · a steady bright dot`);
+      else row(`${b.name}, right now`, `${where(b)} · a bright dot moving fast. Look now.`);
+    });
+    const when = (t) => new Date(t).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+    state.passes.list.filter((p) => !up.some((b) => b.name === p.name)).forEach((p) => {
+      const mins = Math.max(1, Math.round((p.end - p.start) / 60e3));
+      row(`${p.name}, next pass`, `${when(p.start)} · ${compassShort(p.startAz)} to ${compassShort(p.endAz)}, up to ${Math.round(p.top)}° · about ${mins} min`);
+    });
+    if (!ul.children.length) row('Nothing else right now', 'The Moon and planets are down or lost in daylight.');
+  }
+
   // Screen axes in east-north-up coordinates, from the W3C device orientation angles.
   function deviceAxes(alpha, beta, gamma) {
     const cX = Math.cos(rad(beta)), sX = Math.sin(rad(beta));
@@ -963,16 +1341,20 @@
 
     const sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
     const sunUp = sun.el > 0;
+    // Something bright and exact to line up on: the sun by day, the Moon when it's up.
+    const guide = alignTarget();
     const parts = [];
     if (Math.round(ar.nudgeAz)) parts.push(`${Math.abs(Math.round(ar.nudgeAz))}° ${ar.nudgeAz < 0 ? 'right' : 'left'}`);
     if (Math.round(ar.nudgeEl)) parts.push(`${Math.abs(Math.round(ar.nudgeEl))}° ${ar.nudgeEl > 0 ? 'up' : 'down'}`);
     setText($('arnudge'), (parts.length ? `Labels moved ${parts.join(', ')}. ` : '') + (sunUp
       ? 'Labels off? Center the sun on screen, then tap Line up. Don\'t look straight at the sun.'
-      : 'Labels off? Tap a label, center that plane, then tap Line up. Or drag the picture.'));
+      : guide ? 'Labels off? Center the Moon on screen, then tap Line up.'
+        : 'Labels off? Tap a label, center that plane, then tap Line up. Or drag the picture.'));
 
     const hint = $('arhint'), arcard = $('arcard');
     const sunBtn = $('alignsun'), planeBtn = $('alignplane');
-    sunBtn.hidden = !sunUp || !ar.axes;
+    sunBtn.hidden = !guide || !ar.axes;
+    if (guide) setText(sunBtn, `Line up on the ${guide.name === 'Moon' ? 'Moon' : 'sun'}`);
     if (!ar.axes) {
       planeBtn.hidden = true;
       arcard.hidden = true;
@@ -1027,6 +1409,20 @@
       g.append(svgEl('circle', { cx: sq.x, cy: sq.y, r: 16, fill: 'none', stroke: text, 'stroke-width': 2 }));
       chips.push(chip(sq.x, sq.y + 44, 'Sun', { anchor: 'middle' }));
     }
+    skyBodies(new Date()).forEach((b) => {
+      if (b.el < -1 || (!b.ok && !state.showAll)) return;
+      const q = project(b.az, b.el);
+      if (!onScreen(q, 20)) return;
+      if (b.kind === 'moon') {
+        const t = towardSun(b, sun), tq = project(t.az, t.el);
+        g.append(svgEl('circle', { cx: q.x, cy: q.y, r: 16, fill: 'none', stroke: white, 'stroke-width': 5 }));
+        g.append(moonGlyph(q.x, q.y, 16, tq ? deg(Math.atan2(tq.x - q.x, -(tq.y - q.y))) : 90, b.lit, text));
+      } else {
+        g.append(svgEl('circle', { cx: q.x, cy: q.y, r: 9, fill: 'none', stroke: white, 'stroke-width': 5 }));
+        g.append(svgEl('circle', { cx: q.x, cy: q.y, r: 9, fill: 'none', stroke: b.ok ? text : muted, 'stroke-width': 2 }));
+      }
+      chips.push(chip(q.x, q.y + (b.kind === 'moon' ? 44 : 36), b.name, { anchor: 'middle', color: b.ok ? text : muted }));
+    });
 
     const planes = visible();
     const placed = planes.map((p) => ({ p, q: project(p.brg, p.el) })).filter((o) => onScreen(o.q, 40));
@@ -1164,9 +1560,15 @@
   arBox.addEventListener('pointerup', endDrag);
   arBox.addEventListener('pointercancel', (e) => { if (ar.drag && ar.drag.id === e.pointerId) ar.drag = null; });
   $('realign').addEventListener('click', () => { ar.nudgeAz = 0; ar.nudgeEl = 0; saveAlign(); drawAR(); });
+  function alignTarget() {
+    const now = new Date(), s = sunAt(now, state.obs.lat, state.obs.lon);
+    if (s.el > 0) return { name: 'Sun', ...s };
+    const m = moonAt(now, state.obs.lat, state.obs.lon);
+    return m.el > 0 ? m : null;
+  }
   $('alignsun').addEventListener('click', () => {
-    const s = sunAt(new Date(), state.obs.lat, state.obs.lon);
-    alignOn(s.az, s.el);
+    const t = alignTarget();
+    if (t) alignOn(t.az, t.el);
   });
   $('alignplane').addEventListener('click', () => {
     const p = state.aircraft.find((a) => a.hex === state.selected);
@@ -1263,6 +1665,7 @@
   const linkedPlace = PLACES.find((p) => p.id === params.get('at'));
   if (linkedPlace) placeSel.value = linkedPlace.id;
   setObserver(linkedPlace || PLACES[0]);
+  loadOrbits();
 })();
 </script>
 </body>
