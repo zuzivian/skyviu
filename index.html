@@ -18,6 +18,7 @@
     color-scheme: light;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.55 Inter, system-ui, sans-serif; }
   main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
@@ -32,7 +33,7 @@
 
   @media (max-width: 480px) { h1 { font-size: 28px; } main { padding-top: 24px; } }
   .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0 0; }
-  .controls select { flex: 1 1 180px; min-width: 0; }
+  .controls select { flex: 1 1 160px; min-width: 0; }
   select, button { font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--muted); border-radius: 8px; padding: 8px 12px; min-height: 44px; }
   button { cursor: pointer; }
   select:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -45,56 +46,64 @@
 
   .status { font-size: 16px; color: var(--muted); margin: 4px 0 12px; }
   .status.error { color: var(--text); }
-  svg#sky { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  svg#sky { display: block; width: 100%; max-width: max(300px, calc(100vh - 320px)); margin: 0 auto; height: auto; border: 1px solid var(--line); border-radius: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   svg text { font-family: Inter, system-ui, sans-serif; font-size: 16px; }
   .legend { font-size: 16px; color: var(--muted); margin-top: 10px; }
   .ar { position: relative; height: 72vh; height: 72svh; min-height: 380px; max-height: 760px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); touch-action: none; user-select: none; -webkit-user-select: none; }
-  .ar[hidden] { display: none; }
   .ar video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .ar svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .arhint { position: absolute; left: 12px; right: 12px; top: 12px; margin: 0; background: var(--bg); color: var(--text); border: 1px solid var(--muted); border-radius: 8px; padding: 8px 12px; font-size: 16px; line-height: 1.4; }
   .arhint:empty { display: none; }
   .arcard { position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0; background: var(--bg); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 12px; font-size: 16px; line-height: 1.4; pointer-events: none; }
-  .arcard[hidden] { display: none; }
   .arcard strong { display: block; font-weight: 600; color: var(--accent); }
 
-  .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
-  .card dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 0; font-size: 16px; }
+  .head { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 16px 0 12px; min-height: 92px; }
+  .head .name { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1.15; margin: 0 0 4px; }
+  .head .sub { font-size: 16px; color: var(--muted); margin: 0; }
+  .head svg { flex: none; }
+  .cta { display: block; width: 100%; margin: 0 0 12px; min-height: 52px; background: var(--accent); border-color: var(--accent); color: #FFFFFF; font-weight: 600; }
+  .key { display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: center; font-size: 16px; color: var(--muted); margin-top: 8px; }
+  .key span { display: inline-flex; gap: 6px; align-items: center; }
+
+  details { border-top: 1px solid var(--line); margin-top: 16px; }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; font-weight: 600; min-height: 48px; display: flex; align-items: center; }
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card { padding-bottom: 16px; }
+  .card dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 16px; font-size: 16px; }
   .card dt { color: var(--muted); }
   .card dd { margin: 0; }
-  .look { font-size: 19px; margin: 4px 0 0; }
 
   ul.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
   ul.list li { border-bottom: 1px solid var(--line); }
   ul.list button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; padding: 10px 4px; background: var(--bg); }
   ul.list button[aria-current="true"] .who { color: var(--accent); }
+  ul.next button { display: grid; grid-template-columns: 72px 1fr; align-items: center; }
+  .when { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 22px; }
   .who { font-weight: 600; }
   .meta { display: block; font-size: 16px; color: var(--muted); }
 
-  .gaps p { margin-bottom: 14px; }
+  .gaps p { margin-bottom: 8px; }
   .gaps strong { font-weight: 600; }
   footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 16px; color: var(--muted); }
 </style>
 </head>
 <body>
 <main>
-  <h1 id="title">What's flying over Stanford</h1>
-  <p class="muted">Live positions from public ADS-B receivers, refreshed every 10 seconds. Tap a plane to see where to look.</p>
+  <h1 id="title">Above Stanford now</h1>
+  <p id="status" class="status" role="status">Finding planes.</p>
 
   <div class="controls">
     <select id="place" aria-label="Where you are"></select>
-    <button id="locate" type="button">My location</button>
-  </div>
-  <div class="controls">
     <div class="seg" role="group" aria-label="View">
-      <button type="button" data-view="camera" aria-pressed="false">Camera</button>
       <button type="button" data-view="sky" aria-pressed="true">Sky</button>
       <button type="button" data-view="map" aria-pressed="false">Map</button>
     </div>
-    <button id="compass" type="button" hidden>Turn with my phone</button>
   </div>
 
-  <p id="status" class="status" role="status">Loading live positions.</p>
+  <section id="head" class="head" aria-live="polite"></section>
+  <button id="cta" class="cta" type="button" hidden>Point your phone at the sky</button>
+
   <svg id="sky" role="img" aria-label="Aircraft positions"></svg>
   <div id="ar" class="ar" hidden>
     <video id="cam" playsinline muted autoplay></video>
@@ -108,27 +117,30 @@
     <button id="realign" type="button">Reset alignment</button>
     <span id="arnudge" class="small muted"></span>
   </div>
+  <div id="key" class="key">
+    <span><svg width="16" height="18" viewBox="-8 -9 16 18" aria-hidden="true"><path d="M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z" fill="#1751C6"/></svg>Live</span>
+    <span><svg width="16" height="18" viewBox="-8 -9 16 18" aria-hidden="true"><path d="M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z" fill="#4A5C70"/></svg>Not heard for a minute</span>
+    <span><svg width="30" height="10" aria-hidden="true"><line x1="0" y1="5" x2="30" y2="5" stroke="#1751C6" stroke-width="2" stroke-dasharray="6 5"/></svg>Next 3 minutes</span>
+    <label class="check"><input id="ground" type="checkbox"> Ground traffic</label>
+  </div>
   <p id="legend" class="legend"></p>
-  <label class="check"><input id="ground" type="checkbox"> Show ground traffic</label>
 
-  <section id="card" class="card" aria-live="polite" hidden></section>
+  <details id="more" class="card" hidden><summary>Flight details</summary><div id="card" aria-live="polite"></div></details>
 
   <h2>Coming over next</h2>
-  <p class="muted small">Planes on course to pass at least 30° up in the next 10 minutes. This assumes each keeps its heading, speed and climb, so a plane turning to land will often go somewhere else.</p>
-  <ul id="next" class="list"></ul>
+  <ul id="next" class="list next"></ul>
+  <p class="muted small" style="margin-top:8px">If each plane flies straight. Planes turning to land often won't.</p>
 
-  <h2>Everything in range</h2>
-  <ul id="list" class="list"></ul>
+  <details><summary id="allsum">All planes in range</summary><ul id="list" class="list"></ul></details>
 
   <section class="gaps">
     <h2>What this data can't see</h2>
-    <p><strong>Aircraft that don't broadcast.</strong> The FAA requires ADS-B Out in most controlled airspace: Class A, B and C, and Class E at and above 10,000 feet. Outside that airspace, some aircraft fly without it, and they never appear here.</p>
-    <p><strong>Low or hidden aircraft.</strong> This feed comes from volunteer receivers. A receiver needs a line of sight to the aircraft, so low flights behind hills or buildings, and landings at small airports, can drop out.</p>
-    <p><strong>Where a plane is right now.</strong> Every position is a few seconds to about a minute old. In one test the oldest was 45 seconds. This page moves each plane forward along its last heading at its last speed, so a plane that has turned since then will be off. Positions more than a minute old are drawn in gray, where they were last heard.</p>
-    <p><strong>Where it's going.</strong> Planes don't broadcast their route. Flight apps add routes from airline schedules. This page doesn't guess, and "Coming over next" only follows each plane in a straight line.</p>
-    <p><strong>Who some aircraft are.</strong> Some owners use a temporary privacy address from the FAA's PIA program, so the feed can't match them to a registration or aircraft type.</p>
-    <p><strong>Exactly where to look.</strong> The angles assume a flat, open horizon and ignore trees, hills and buildings. Altitude comes from the aircraft's own instruments, so angles are close, not exact. In the camera view, your phone's compass and camera add their own error, which is why you can line the labels up on the sun or on a plane you can see.</p>
-    <p><strong>Exact sound delay.</strong> The delay uses a fixed speed of sound, 340 meters per second. Temperature and wind change it.</p>
+    <p><strong>Planes without ADS-B.</strong> The FAA requires it in busy airspace and above 10,000 feet, not everywhere.</p>
+    <p><strong>Low planes behind hills.</strong> Receivers need a clear line of sight.</p>
+    <p><strong>Exactly where a plane is now.</strong> Reports are seconds to a minute old. Marks are moved forward in a straight line.</p>
+    <p><strong>Where it's going.</strong> Planes don't broadcast routes, and this page doesn't guess.</p>
+    <p><strong>Some identities.</strong> FAA privacy addresses hide the registration and type.</p>
+    <p><strong>Perfect angles.</strong> They assume an open horizon. Phone compasses drift, so line up on the sun.</p>
   </section>
 
   <footer>
@@ -208,6 +220,9 @@
   const PROJECT_MAX_S = 90;    // never move a plane forward further than this
   const NEXT_S = 600;          // how far ahead "Coming over next" looks
   const NEXT_MIN_EL = 30;
+  const AHEAD_S = 180;         // the dashed path ahead of the picked plane
+  const LABELS = 5;            // most labels drawn on the sky or map
+  const LOW_EL = 5;            // degrees; lower planes are drawn as dots in the sky view
   const KT_MS = 0.514444;      // meters per second in a knot
   const EARTH_M = 6371008.8;
   const SOUND_MS = 340;
@@ -224,7 +239,6 @@
     obs: PLACES[0],
     view: 'sky',
     showGround: false,
-    heading: null,           // degrees from north when "Turn with my phone" is on
     aircraft: [],
     trails: new Map(),       // hex -> [{lat, lon, t}]
     selected: null,
@@ -364,8 +378,8 @@
     return 'Type not in feed';
   }
   function whoNote(p) {
-    if (/^N\d/.test(p.callsign)) return 'Flying under its US registration, which is typical of private and general aviation flights.';
-    if (!p.raw.r && !p.raw.t) return 'No registration in the feed. It may use an FAA privacy address.';
+    if (/^N\d/.test(p.callsign)) return 'Flying under its US registration, typical of private flights.';
+    if (!p.raw.r && !p.raw.t) return 'No registration. Maybe an FAA privacy address.';
     return '';
   }
   function lookText(p) {
@@ -404,6 +418,7 @@
     }
     renderStatus();
     renderChart();
+    renderHead();
     renderCard();
     renderNext();
     renderList();
@@ -416,18 +431,19 @@
     const time = state.updatedAt ? state.updatedAt.toLocaleTimeString('en-US') : null;
     if (state.error) {
       el.className = 'status error';
-      el.textContent = `The data source didn't answer (${state.error}). ` +
-        (time ? `The positions shown are from ${time} and turn gray after a minute.` : 'Trying again in 10 seconds.');
+      el.textContent = `No answer from the data source (${state.error}). Trying again.`;
       return;
     }
     el.className = 'status';
-    if (!time) { el.textContent = 'Loading live positions.'; return; }
-    el.textContent = `Updated ${time}. ${air} in the air within ${NM} nautical miles, ${gnd} on the ground` +
-      (state.showGround ? '.' : ' (hidden).') + (state.notice ? ` ${state.notice}` : '');
+    if (!time) { el.textContent = 'Finding planes.'; return; }
+    el.textContent = `Live · ${air} planes in the air within 29 miles${state.showGround ? `, ${gnd} on the ground` : ''}` +
+      (state.notice ? `. ${state.notice}` : '');
   }
 
   function size() {
-    const measured = Math.round(svg.getBoundingClientRect().width);
+    // Inside the border and unrounded, so 16px text draws at 16px.
+    const cs = getComputedStyle(svg);
+    const measured = svg.getBoundingClientRect().width - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
     const w = measured >= 200 ? measured : 343;
     return { w, h: w };
   }
@@ -444,19 +460,21 @@
     svg.style.display = camera ? 'none' : '';
     $('ar').hidden = !camera;
     $('arbar').hidden = !camera;
+    $('key').hidden = camera;
+    $('cta').hidden = camera || !isPhone;
     if (camera) { drawAR(); return; }
+    $('legend').textContent = '';
     const { w, h } = size();
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     svg.replaceChildren();
     const cx = w / 2, cy = h / 2, R = w / 2 - 34;
-    const rot = state.view === 'sky' && state.heading != null ? state.heading : 0;
 
     // Position on screen for a lat/lon, in the current view.
     const place = state.view === 'sky'
       ? (lat, lon, ft) => {
           const { d, brg } = geo(state.obs, lat, lon);
           const el = Math.max(0, elevation(d, ft * 0.3048));
-          const r = R * (90 - el) / 90, a = rad(brg - rot);
+          const r = R * (90 - el) / 90, a = rad(brg);
           return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
         }
       : (lat, lon) => {
@@ -473,11 +491,14 @@
       [0, 30, 60].forEach((e) => {
         const r = R * (90 - e) / 90;
         g.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: e === 0 ? muted : line, 'stroke-width': 1 }));
-        if (e) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${e}° up`));
+        if (e) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${e}°`));
       });
-      g.append(svgEl('text', { x: cx, y: cy + 5, fill: muted, 'text-anchor': 'middle' }, '+'));
+      // Say what the circle means inside the picture, not in a paragraph under it.
+      g.append(svgEl('circle', { cx, cy, r: 3, fill: muted }));
+      g.append(svgEl('text', { x: cx, y: cy + 22, fill: muted, 'text-anchor': 'middle' }, 'Overhead'));
+      g.append(svgEl('text', { x: cx, y: cy + R - 10, fill: muted, 'text-anchor': 'middle' }, 'Horizon'));
       ['N', 'E', 'S', 'W'].forEach((c, i) => {
-        const a = rad(i * 90 - rot);
+        const a = rad(i * 90);
         g.append(svgEl('text', {
           x: cx + (R + 18) * Math.sin(a), y: cy - (R + 18) * Math.cos(a) + 6,
           fill: c === 'N' ? text : muted, 'text-anchor': 'middle', 'font-weight': c === 'N' ? 600 : 400,
@@ -504,6 +525,7 @@
         else apBoxes.push(b);
       });
       g.append(svgEl('circle', { cx, cy, r: 4, fill: text }));
+      g.append(svgEl('text', { x: cx + 8, y: cy - 8, fill: text, 'font-weight': 600 }, 'You'));
     }
 
     const planes = visible().filter((p) => state.view === 'map' ? p.d / M_PER_MI <= MAP_MI : true);
@@ -511,7 +533,6 @@
       (b.hex === state.selected) - (a.hex === state.selected) ||
       (state.view === 'sky' ? b.el - a.el : a.d - b.d));
     const boxes = [];
-    let hiddenLabels = 0;
 
     // Trails first, so marks sit on top. Each trail runs from past reports to where the plane is now.
     planes.forEach((p) => {
@@ -521,6 +542,18 @@
         g.append(svgEl('polyline', { points: pts, fill: 'none', stroke: muted, 'stroke-width': 1, 'stroke-dasharray': '2 3' }));
       }
     });
+    // Where the picked plane goes in the next few minutes if it flies straight.
+    const sp = planes.find((p) => p.hex === state.selected);
+    if (sp && sp.moved && sp.gs > 30) {
+      const rate = sp.raw.baro_rate ?? sp.raw.geom_rate;
+      const pts = [];
+      for (let t = 0; t <= AHEAD_S; t += 10) {
+        const to = project(sp.lat, sp.lon, sp.track, sp.gs * KT_MS * t);
+        const q = place(to.lat, to.lon, Math.max(0, sp.ftNow + (typeof rate === 'number' ? rate * t / 60 : 0)));
+        pts.push(`${q.x.toFixed(1)},${q.y.toFixed(1)}`);
+      }
+      g.append(svgEl('polyline', { points: pts.join(' '), fill: 'none', stroke: accent, 'stroke-width': 2, 'stroke-dasharray': '6 5' }));
+    }
 
     order.slice().reverse().forEach((p) => {
       const q = place(p.lat, p.lon, p.ftNow);
@@ -539,22 +572,30 @@
       const color = old || p.onGround ? muted : accent;
       const mark = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex, style: 'cursor:pointer' });
       mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
-      if (isSel) mark.append(svgEl('circle', { r: 15, fill: 'none', stroke: accent, 'stroke-width': 2 }));
+      if (isSel) mark.append(svgEl('circle', { r: 18, fill: 'none', stroke: accent, 'stroke-width': 2.5 }));
+      // Planes this low are hard to see from the ground, so they get a small dot, not an arrow.
+      if (state.view === 'sky' && !isSel && !p.onGround && p.el < LOW_EL) {
+        mark.append(svgEl('circle', { r: 3, fill: color }));
+        g.append(mark);
+        return;
+      }
       mark.append(svgEl('path', {
-        d: 'M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z', transform: `rotate(${angle.toFixed(0)})`,
+        d: 'M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z', transform: `rotate(${angle.toFixed(0)})${isSel ? ' scale(1.3)' : ''}`,
         fill: p.onGround ? 'none' : color, stroke: color, 'stroke-width': 1.5, 'stroke-linejoin': 'round',
       }));
       g.append(mark);
     });
 
-    // Labels: selected first, then highest (sky) or nearest (map). Skip any that would
-    // overlap another label or a fixed label.
+    // Labels: selected first, then highest (sky) or nearest (map), at most LABELS of them.
+    // Skip any that would overlap another label or a fixed label.
     const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     g.querySelectorAll('text').forEach((t) => { const b = t.getBBox(); boxes.push({ x: b.x - 2, y: b.y, w: b.width + 4, h: b.height }); });
+    let labeled = 0;
     order.forEach((p) => {
+      if (labeled >= LABELS) return;
       const q = place(p.lat, p.lon, p.ftNow);
       const l1 = p.callsign || p.raw.r || p.hex.toUpperCase();
-      const l2 = p.onGround ? 'ground' : `${p.altFt != null ? fmt(p.altFt) + ' ft' : '?'} · ${p.gs != null ? fmt(p.gs) + ' kt' : '?'}`;
+      const l2 = p.onGround ? 'ground' : (p.altFt != null ? `${fmt(p.altFt)} ft` : '?');
       const isSel = p.hex === state.selected;
       const t = svgEl('text', { fill: isSel ? accent : text, 'font-weight': isSel ? 600 : 400, 'pointer-events': 'none' });
       // Both lines need an x before measuring, or the second line runs on after the first.
@@ -571,70 +612,77 @@
         .filter((s) => s.x >= 4 && s.x + bw <= w - 4 && s.y >= 4 && s.y + bh <= h - 4);
       const free = (box) => !boxes.some((b) => overlaps(box, b));
       const box = spots.find(free) || (isSel ? spots[0] : null);
-      if (!box) { t.remove(); hiddenLabels++; return; }
+      if (!box) { t.remove(); return; }
       [t, s1, s2].forEach((e) => e.setAttribute('x', box.x.toFixed(1)));
       t.setAttribute('y', (box.y + 15).toFixed(1));
       boxes.push(box);
+      labeled++;
     });
+  }
 
-    const legend = $('legend');
-    const hidden = hiddenLabels ? ` ${hiddenLabels} labels are hidden where they would overlap; the list below has every aircraft.` : '';
-    if (state.view === 'sky') {
-      const top = state.heading != null ? `the direction you're facing (${Math.round(state.heading)}° ${compassShort(state.heading)})` : 'north';
-      legend.textContent = `The center is straight overhead and the outer circle is the horizon. The top is ${top}. Each mark is where the plane should be now, moved forward from its last report. Gray marks are where a plane was last heard, more than a minute ago.${hidden}`;
-    } else {
-      legend.textContent = `North is up. The dot is you; squares are airports. Each mark is where the plane should be now, and the dotted line behind it is where it has been. Gray marks are where a plane was last heard, more than a minute ago.${hidden}`;
+  // The answer, first: which plane is up there, and where to look for it.
+  function renderHead() {
+    const head = $('head');
+    const p = state.aircraft.find((a) => a.hex === state.selected);
+    $('more').hidden = !p;
+    head.replaceChildren();
+    const words = document.createElement('div');
+    head.append(words);
+    const line = (cls, text) => { const e = document.createElement('p'); e.className = cls; e.textContent = text; words.append(e); };
+    if (!p) {
+      line('sub', state.updatedAt ? 'No planes in the air nearby right now.' : 'Finding planes overhead.');
+      return;
     }
+    line('name', nameOf(p));
+    line('sub', typeOf(p));
+    line('sub', p.onGround ? 'On the ground' :
+      `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'Altitude unknown'} · ${(p.d / M_PER_MI).toFixed(1)} mi away`);
+    if (!p.onGround) head.append(lookGlyph(p));
+  }
+
+  // Where to look, as a picture: a compass arrow for the direction and a tilt for the angle.
+  function lookGlyph(p) {
+    const muted = '#4A5C70', text = '#0F1E2E', accent = '#1751C6';
+    const s = svgEl('svg', { width: 150, height: 94, viewBox: '0 0 150 94', role: 'img', 'aria-label': lookText(p) });
+    const cx = 34, cy = 42, r = 26, a = rad(p.brg);
+    s.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
+    s.append(svgEl('text', { x: cx, y: 12, fill: muted, 'text-anchor': 'middle' }, 'N'));
+    const tx = cx + (r - 6) * Math.sin(a), ty = cy - (r - 6) * Math.cos(a);
+    s.append(svgEl('line', { x1: cx, y1: cy, x2: tx.toFixed(1), y2: ty.toFixed(1), stroke: accent, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    s.append(svgEl('path', { d: 'M0,-7 L5.5,3 L-5.5,3 Z', transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${Math.round(p.brg)})`, fill: accent }));
+    s.append(svgEl('text', { x: cx, y: 90, fill: text, 'font-weight': 600, 'text-anchor': 'middle' }, compassShort(p.brg)));
+    const ox = 86, oy = 70, qr = 56, e = rad(Math.max(0, Math.min(90, p.el)));
+    s.append(svgEl('path', { d: `M${ox + qr},${oy} A${qr},${qr} 0 0 0 ${ox},${oy - qr}`, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
+    s.append(svgEl('line', { x1: ox, y1: oy, x2: ox + qr, y2: oy, stroke: muted, 'stroke-width': 1.5 }));
+    s.append(svgEl('line', { x1: ox, y1: oy, x2: (ox + qr * Math.cos(e)).toFixed(1), y2: (oy - qr * Math.sin(e)).toFixed(1), stroke: accent, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    s.append(svgEl('text', { x: ox, y: 90, fill: text, 'font-weight': 600 }, `${Math.round(Math.max(0, p.el))}° up`));
+    return s;
   }
 
   function renderCard() {
     const card = $('card');
     const p = state.aircraft.find((a) => a.hex === state.selected);
-    if (!p) { card.hidden = true; return; }
-    card.hidden = false;
+    card.replaceChildren();
+    if (!p) return;
     const mi = p.d / M_PER_MI, slantMi = p.slant / M_PER_MI;
     const delay = p.slant / SOUND_MS;
     const moved = p.gs ? (p.gs * 1.15078 * delay / 3600) : 0;
-    const note = whoNote(p);
     const src = SOURCES[p.raw.type] || p.raw.type || 'unknown';
     const rows = [
-      ['Aircraft', `${typeOf(p)}${p.raw.r ? `, registration ${p.raw.r}` : ''}`],
+      ['Aircraft', `${typeOf(p)}${p.raw.r ? `, ${p.raw.r}` : ''}`],
       ['Altitude', motionText(p)],
-      ['Speed', p.gs != null ? `${fmt(p.gs)} knots (${fmt(p.gs * 1.15078)} mph)` : 'Not in feed'],
-      ['Distance', `${mi.toFixed(1)} miles along the ground, ${slantMi.toFixed(1)} miles in a straight line`],
-      ['Route', 'Not in this feed. Planes don\'t broadcast where they\'re going.'],
-      ['Position', `Last heard ${Math.round(p.since) === 1 ? '1 second' : `${Math.round(p.since)} seconds`} ago, ${src}. ` +
-        (p.moved ? 'Shown moved forward to where it should be now.' : 'Shown where it was heard.')],
+      ['Speed', p.gs != null ? `${fmt(p.gs * 1.15078)} mph` : 'Not in feed'],
+      ['Distance', `${mi.toFixed(1)} mi, ${slantMi.toFixed(1)} mi in a straight line`],
+      ['Route', 'Not broadcast'],
+      ['Heard', `${Math.round(p.since)} s ago, ${src}`],
     ];
-    if (p.raw.squawk) rows.push(['Squawk', p.raw.squawk]);
-    if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency status', p.raw.emergency]);
-
-    card.replaceChildren();
-    const h = document.createElement('h3');
-    h.textContent = nameOf(p);
-    const look = document.createElement('p');
-    look.className = 'look';
-    look.textContent = lookText(p);
-    card.append(h, look);
-    if (!p.onGround && p.el >= 3 && p.el < 75) {
-      const tip = document.createElement('p');
-      tip.className = 'muted small';
-      tip.textContent = 'A fist held at arm\'s length covers about 10° of sky.';
-      card.append(tip);
-    }
     if (!p.onGround && slantMi <= 8) {
-      const sound = document.createElement('p');
-      sound.className = 'small';
-      sound.textContent = `If you can hear it, that sound left the plane about ${Math.round(delay)} seconds ago` +
-        (moved >= 0.1 ? `. It has flown about ${moved.toFixed(1)} miles since, so look ahead of the sound.` : '.');
-      card.append(sound);
+      rows.push(['Sound', `${Math.round(delay)} s old when you hear it` + (moved >= 0.1 ? `, so look ${moved.toFixed(1)} mi ahead of it` : '')]);
     }
-    if (note) {
-      const n = document.createElement('p');
-      n.className = 'muted small';
-      n.textContent = note;
-      card.append(n);
-    }
+    if (p.raw.squawk) rows.push(['Squawk', p.raw.squawk]);
+    if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency', p.raw.emergency]);
+    const note = whoNote(p);
+    if (note) rows.push(['Note', note]);
     const dl = document.createElement('dl');
     rows.forEach(([k, v]) => {
       const dt = document.createElement('dt'); dt.textContent = k;
@@ -644,7 +692,6 @@
     const share = document.createElement('button');
     share.type = 'button';
     share.textContent = 'Share this plane';
-    share.style.marginTop = '16px';
     share.addEventListener('click', () => sharePlane(p, share));
     card.append(dl, share);
   }
@@ -693,7 +740,7 @@
       const li = document.createElement('li');
       li.className = 'muted small';
       li.style.padding = '10px 4px';
-      li.textContent = state.updatedAt ? 'No plane is on course to pass high over you in the next 10 minutes.' : 'Waiting for the first update.';
+      li.textContent = state.updatedAt ? 'Nothing on course to pass high over you in the next 10 minutes.' : 'Waiting for the first update.';
       ul.append(li);
       return;
     }
@@ -703,13 +750,18 @@
       b.type = 'button';
       b.dataset.hex = p.hex;
       if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
+      const when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = `${Math.max(1, Math.round(t / 60))} min`;
+      const right = document.createElement('span');
       const who = document.createElement('span');
       who.className = 'who';
-      who.textContent = `${t < 90 ? 'In about a minute' : `In about ${Math.round(t / 60)} minutes`}: ${nameOf(p)}`;
+      who.textContent = nameOf(p);
       const meta = document.createElement('span');
       meta.className = 'meta';
-      meta.textContent = `${typeOf(p)}. Should pass ${Math.round(el)}° up, toward the ${compassWord(brg)}, at about ${fmt(Math.round(ft / 100) * 100)} ft.`;
-      b.append(who, meta);
+      meta.textContent = `${Math.round(el)}° up ${compassShort(brg)} · ${fmt(Math.round(ft / 100) * 100)} ft`;
+      right.append(who, meta);
+      b.append(when, right);
       li.append(b);
       ul.append(li);
     });
@@ -718,6 +770,7 @@
   function renderList() {
     const ul = $('list');
     const planes = visible().slice().sort((a, b) => a.d - b.d);
+    $('allsum').textContent = `All ${planes.length} planes in range`;
     ul.replaceChildren();
     if (!planes.length) {
       const li = document.createElement('li');
@@ -741,10 +794,8 @@
       const where = p.onGround ? 'on the ground' : `${Math.round(Math.max(p.el, 0))}° up ${compassShort(p.brg)}`;
       meta.textContent = [
         p.onGround ? null : (p.altFt != null ? `${fmt(p.altFt)} ft` : null),
-        p.gs != null ? `${fmt(p.gs)} kt` : null,
         `${(p.d / M_PER_MI).toFixed(1)} mi`,
         where,
-        `heard ${Math.round(p.since)} s ago`,
       ].filter(Boolean).join(' · ');
       b.append(who, meta);
       li.append(b);
@@ -872,7 +923,7 @@
       ar.listening = false;
     }
     ar.axes = null; ar.absolute = false; ar.offset = null;
-    if (wakeLock && $('compass').dataset.on !== '1') { wakeLock.release(); wakeLock = null; }
+    if (wakeLock) { wakeLock.release(); wakeLock = null; }
   }
 
   function saveAlign() {
@@ -901,8 +952,8 @@
     if (Math.round(ar.nudgeAz)) parts.push(`${Math.abs(Math.round(ar.nudgeAz))}° ${ar.nudgeAz < 0 ? 'right' : 'left'}`);
     if (Math.round(ar.nudgeEl)) parts.push(`${Math.abs(Math.round(ar.nudgeEl))}° ${ar.nudgeEl > 0 ? 'up' : 'down'}`);
     setText($('arnudge'), (parts.length ? `Labels moved ${parts.join(', ')}. ` : '') + (sunUp
-      ? 'Labels off? Put the sun in the center circle and tap Line up on the sun. Look at the screen, not at the sun.'
-      : 'Labels off? Tap a label, put that plane in the center circle, then tap Line up. You can also drag the picture.'));
+      ? 'Labels off? Center the sun on screen, then tap Line up. Don\'t look straight at the sun.'
+      : 'Labels off? Tap a label, center that plane, then tap Line up. Or drag the picture.'));
 
     const hint = $('arhint'), arcard = $('arcard');
     const sunBtn = $('alignsun'), planeBtn = $('alignplane');
@@ -912,7 +963,7 @@
       arcard.hidden = true;
       ar.center = null;
       setText(hint, ar.motionMsg || ar.camMsg ||
-        'Waiting for the compass. If nothing happens, move your phone in a figure eight.');
+        'Waiting for the compass. Wave your phone in a figure eight.');
       return;
     }
     const { f, up } = ar.axes;
@@ -997,7 +1048,6 @@
       m.append(svgEl('circle', { r: 2.5, fill: color }));
       g.append(m);
     });
-    let hidden = 0;
     placed.forEach(({ p, q }) => {
       const isSel = p.hex === state.selected;
       const t = svgEl('text', { fill: isSel ? accent : text, 'font-weight': isSel ? 600 : 400, 'pointer-events': 'none' });
@@ -1014,7 +1064,7 @@
         { x: q.x + 22, y: q.y - bh / 2 }, { x: q.x - 22 - bw, y: q.y - bh / 2 },
       ].map((s) => ({ x: s.x, y: s.y, w: bw, h: bh })).filter((s) => s.x >= 2 && s.x + bw <= W - 2 && s.y >= 2 && s.y + bh <= H - 2);
       const spot = spots.find((s) => !taken.some((o) => overlaps(s, o))) || (isSel ? spots[0] : null);
-      if (!spot) { t.remove(); hidden++; return; }
+      if (!spot) { t.remove(); return; }
       taken.push(spot);
       [t, s1, s2].forEach((e) => e.setAttribute('x', (spot.x + 6).toFixed(1)));
       t.setAttribute('y', (spot.y + 19).toFixed(1));
@@ -1037,25 +1087,27 @@
     planeBtn.hidden = !sel || sel.onGround;
     if (sel) setText(planeBtn, `Line up on ${sel.callsign || sel.raw.r || sel.hex.toUpperCase()}`);
     const lift = sel ? arcard.offsetHeight + 12 : 0;
-    if (Math.abs(f[2]) < 0.95) chip(W / 2, H - 18 - lift, `Facing ${compassShort(fAz)}, ${Math.round(fAz)}°`, { anchor: 'middle' });
+    if (Math.abs(f[2]) < 0.95) chip(W / 2, H - 18 - lift, `Facing ${compassShort(fAz)} ${Math.round(fAz)}°`, { anchor: 'middle' });
 
-    const out = planes.length - placed.length;
     let msg = '';
     if (sel && !placed.some((o) => o.p.hex === sel.hex)) {
+      // Off screen: an arrow at the edge points the way to turn and tilt.
       const dAz = angDiff(sel.brg, fAz), dEl = sel.el - fEl;
+      const len = Math.hypot(dAz, dEl) || 1;
+      const reach = Math.min(W, H) / 2 - 56;
+      const ax = cx + reach * dAz / len, ay = cy - reach * dEl / len;
+      const turn = deg(Math.atan2(dAz, dEl));
+      g.append(svgEl('path', { d: 'M0,-22 L16,10 L0,2 L-16,10 Z', transform: `translate(${ax.toFixed(1)} ${ay.toFixed(1)}) rotate(${turn.toFixed(0)})`, fill: accent, stroke: white, 'stroke-width': 3, 'stroke-linejoin': 'round' }));
       const moves = [];
-      if (Math.abs(dAz) > 15) moves.push(Math.abs(dAz) > 150 ? 'turn around' : `turn ${dAz > 0 ? 'right' : 'left'}`);
-      if (Math.abs(dEl) > 12) moves.push(`tilt ${dEl > 0 ? 'up' : 'down'}`);
-      msg = `To find ${nameOf(sel)}, ${moves.join(' and ') || 'hold steady'}.`;
-    } else if (ar.held && sel) msg = `Holding ${nameOf(sel)}. Tap empty sky to let the center circle pick again.`;
-    else if (!planes.length) msg = 'No aircraft in range right now.';
-    else if (!ar.aimedOnce) msg = 'Put a plane in the center circle to name it, or tap one.';
-    if (ar.accuracy != null) msg += `${msg ? ' ' : ''}Compass accurate to about ${Math.round(ar.accuracy)}°.`;
+      if (Math.abs(dAz) > 15) moves.push(Math.abs(dAz) > 150 ? 'Turn around' : `Turn ${dAz > 0 ? 'right' : 'left'}`);
+      if (Math.abs(dEl) > 12) moves.push(`${moves.length ? 'tilt' : 'Tilt'} ${dEl > 0 ? 'up' : 'down'}`);
+      msg = `${moves.join(', ') || 'Hold steady'} for ${nameOf(sel)}.`;
+    } else if (ar.held && sel) msg = `Holding ${nameOf(sel)}. Tap empty sky to release.`;
+    else if (!planes.length) msg = 'No planes in range right now.';
+    else if (!ar.aimedOnce) msg = 'Put a plane in the circle.';
+    if (ar.accuracy != null) msg += `${msg ? ' ' : ''}Compass ±${Math.round(ar.accuracy)}°.`;
     setText(hint, msg);
-
-    setText($('legend'), (ar.camMsg ? ar.camMsg + ' ' : '') + 'Rings mark where each plane should be now, moved forward from its last report. ' +
-      'Phone compasses can be off by several degrees, more near metal and cars. ' +
-      (out ? `${out} more are out of view.` : '') + (hidden ? ` ${hidden} labels are hidden where they would overlap.` : ''));
+    setText($('legend'), ar.camMsg);
   }
 
   // Shift the labels so the object in the center circle lines up with where it should be.
@@ -1120,15 +1172,24 @@
   });
   ['list', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button[data-hex]');
-    if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : svg).scrollIntoView({ block: 'nearest' }); }
+    if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : $('head')).scrollIntoView({ block: 'start' }); }
   }));
 
   const placeSel = $('place');
   PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));
+  placeSel.append(new Option('My location', 'me'));
   placeSel.addEventListener('change', () => {
-    if (placeSel.value === 'me') return;
     state.wanted = null;
-    setObserver(PLACES.find((p) => p.id === placeSel.value));
+    if (placeSel.value !== 'me') { setObserver(PLACES.find((p) => p.id === placeSel.value)); return; }
+    const back = () => { placeSel.value = state.obs.id; };
+    if (!navigator.geolocation) { back(); $('status').textContent = 'This browser can\'t share a location.'; return; }
+    $('status').textContent = 'Finding you. Rounded to about 1 km before it leaves your phone.';
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setObserver({ id: 'me', label: 'My location', title: 'you', lat: pos.coords.latitude, lon: pos.coords.longitude });
+    }, (err) => {
+      back();
+      $('status').textContent = `Couldn't get your location (${err.message}).`;
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
   });
   function setObserver(obs) {
     state.obs = obs;
@@ -1141,85 +1202,34 @@
     state.aircraft = [];
     state.trails.clear();
     state.updatedAt = null;
-    $('title').textContent = `What's flying over ${obs.title}`;
+    $('title').textContent = `Above ${obs.title} now`;
     document.title = `Sky over ${obs.title}`;
     render();
     schedule();
   }
 
-  $('locate').addEventListener('click', () => {
-    if (!navigator.geolocation) { $('status').textContent = 'This browser can\'t share a location.'; return; }
-    $('status').textContent = 'Asking for your location. It is rounded to about 1 km before it leaves your phone.';
-    navigator.geolocation.getCurrentPosition((pos) => {
-      let me = [...placeSel.options].find((o) => o.value === 'me');
-      if (!me) { me = new Option('My location', 'me'); placeSel.append(me); }
-      placeSel.value = 'me';
-      setObserver({ id: 'me', label: 'My location', title: 'you', lat: pos.coords.latitude, lon: pos.coords.longitude });
-    }, (err) => {
-      $('status').textContent = `Couldn't get your location (${err.message}).`;
-    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
-  });
-
-  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+  // The camera view needs a phone: a touch screen and motion sensors.
+  const isPhone = 'DeviceOrientationEvent' in window && matchMedia('(pointer: coarse)').matches;
+  function setView(view) {
     const was = state.view;
-    state.view = b.dataset.view;
-    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    $('compass').hidden = state.view !== 'sky' || !('DeviceOrientationEvent' in window);
+    state.view = view;
+    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.view === view)));
     // Start the camera inside the tap: iOS only asks for motion access from a tap.
-    if (state.view === 'camera' && was !== 'camera') startCamera(true);
-    if (state.view !== 'camera' && was === 'camera') stopCamera();
+    if (view === 'camera' && was !== 'camera') startCamera(true);
+    if (view !== 'camera' && was === 'camera') stopCamera();
     render();
-  }));
+  }
+  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+  $('cta').addEventListener('click', () => { setView('camera'); $('ar').scrollIntoView({ block: 'start' }); });
 
   $('ground').addEventListener('change', (e) => { state.showGround = e.target.checked; render(); });
 
-  // "Turn with my phone": rotate the sky view so the top points where you face.
-  let wakeLock = null, frame = 0;
-  function onHeading(hd) {
-    if (hd == null || isNaN(hd)) return;
-    const angle = (screen.orientation && screen.orientation.angle) || 0;
-    const next = (hd + angle + 360) % 360;
-    if (state.heading != null && Math.abs(((next - state.heading + 540) % 360) - 180) < 1) return;
-    state.heading = next;
-    if (!frame) frame = requestAnimationFrame(() => { frame = 0; renderChart(); });
-  }
-  const onOrient = (e) => { if (e.webkitCompassHeading != null) onHeading(e.webkitCompassHeading); };
-  const onAbsolute = (e) => { if (e.alpha != null) onHeading(360 - e.alpha); };
+  let wakeLock = null;
   async function keepAwake() {
     try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch { wakeLock = null; }
   }
-  $('compass').hidden = !('DeviceOrientationEvent' in window);
-  $('compass').addEventListener('click', async () => {
-    const btn = $('compass');
-    if (state.heading != null || btn.dataset.on === '1') {
-      window.removeEventListener('deviceorientation', onOrient);
-      window.removeEventListener('deviceorientationabsolute', onAbsolute);
-      state.heading = null; btn.dataset.on = ''; btn.textContent = 'Turn with my phone';
-      if (wakeLock) { wakeLock.release(); wakeLock = null; }
-      renderChart();
-      return;
-    }
-    try {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const res = await DeviceOrientationEvent.requestPermission();
-        if (res !== 'granted') throw new Error('permission denied');
-      }
-    } catch (err) {
-      $('status').textContent = `Couldn't read the compass (${err.message}).`;
-      return;
-    }
-    window.addEventListener('deviceorientation', onOrient);
-    window.addEventListener('deviceorientationabsolute', onAbsolute);
-    btn.dataset.on = '1';
-    btn.textContent = 'Stop turning';
-    keepAwake();
-    setTimeout(() => {
-      if (state.heading == null && btn.dataset.on === '1') $('status').textContent = 'No compass reading from this device. The top of the sky view stays north.';
-    }, 3000);
-  });
   document.addEventListener('visibilitychange', () => {
     const shown = document.visibilityState === 'visible';
-    if (shown && ($('compass').dataset.on === '1' || state.view === 'camera')) keepAwake();
     if (state.view === 'camera') { if (shown) startCamera(false); else stopCamera(); }
     schedule();
   });
