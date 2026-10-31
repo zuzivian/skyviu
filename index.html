@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sky over Stanford</title>
-<meta name="description" content="Live aircraft over Stanford from public ADS-B receivers: where to look, how old each position is, and what the data can't see.">
+<meta name="description" content="The planes you can actually see from Stanford right now, from public ADS-B data, and where to look for each one.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -37,16 +37,13 @@
   select, button { font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--muted); border-radius: 8px; padding: 8px 12px; min-height: 44px; }
   button { cursor: pointer; }
   select:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .seg { display: inline-flex; border: 1px solid var(--muted); border-radius: 8px; overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; min-height: 42px; }
-  .seg button + button { border-left: 1px solid var(--muted); }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: #FFFFFF; }
-  .check { display: inline-flex; gap: 8px; align-items: center; font-size: 16px; min-height: 44px; }
-  .check input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
+  .controls select { max-width: 360px; }
+  .byline { font-size: 16px; color: var(--muted); margin: 0 0 8px; }
+  h1 .n { color: var(--accent); }
 
   .status { font-size: 16px; color: var(--muted); margin: 4px 0 12px; }
   .status.error { color: var(--text); }
-  svg#sky { display: block; width: 100%; max-width: max(300px, calc(100vh - 320px)); margin: 0 auto; height: auto; border: 1px solid var(--line); border-radius: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  svg#sky { display: block; width: 100%; max-width: max(300px, calc(100vh - 360px)); margin: 0 auto; height: auto; border: 1px solid var(--line); border-radius: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   svg text { font-family: Inter, system-ui, sans-serif; font-size: 16px; }
   .legend { font-size: 16px; color: var(--muted); margin-top: 10px; }
   .ar { position: relative; height: 72vh; height: 72svh; min-height: 380px; max-height: 760px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -57,13 +54,17 @@
   .arcard { position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0; background: var(--bg); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 12px; font-size: 16px; line-height: 1.4; pointer-events: none; }
   .arcard strong { display: block; font-weight: 600; color: var(--accent); }
 
-  .head { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 16px 0 12px; min-height: 92px; }
+  .head { display: flex; gap: 16px; align-items: center; margin: 16px 0 12px; min-height: 92px; }
+  .headmain { flex: 1; min-width: 0; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+  .qr { flex: none; width: 128px; text-align: center; font-size: 16px; line-height: 1.3; color: var(--muted); }
+  .qr svg { display: block; margin: 0 auto 4px; }
+  @media (max-width: 639px) { .qr { display: none; } }
   .head .name { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1.15; margin: 0 0 4px; }
   .head .sub { font-size: 16px; color: var(--muted); margin: 0; }
   .head svg { flex: none; }
   .cta { display: block; width: 100%; margin: 0 0 12px; min-height: 52px; background: var(--accent); border-color: var(--accent); color: #FFFFFF; font-weight: 600; }
-  .key { display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: center; font-size: 16px; color: var(--muted); margin-top: 8px; }
-  .key span { display: inline-flex; gap: 6px; align-items: center; }
+  .how ul { margin: 0 0 12px; padding-left: 20px; }
+  .how li { margin-bottom: 4px; }
 
   details { border-top: 1px solid var(--line); margin-top: 16px; }
   details:last-of-type { border-bottom: 1px solid var(--line); }
@@ -90,18 +91,17 @@
 </head>
 <body>
 <main>
-  <h1 id="title">Above Stanford now</h1>
+  <p class="byline">A live project by <a href="https://natwong.dev/">Nat Wong</a></p>
+  <h1 id="title">Planes you can see from Stanford</h1>
   <p id="status" class="status" role="status">Finding planes.</p>
 
-  <div class="controls">
-    <select id="place" aria-label="Where you are"></select>
-    <div class="seg" role="group" aria-label="View">
-      <button type="button" data-view="sky" aria-pressed="true">Sky</button>
-      <button type="button" data-view="map" aria-pressed="false">Map</button>
+  <section class="head">
+    <div id="head" class="headmain"></div>
+    <div id="qr" class="qr" hidden>
+      <svg width="112" height="112" viewBox="-4 -4 33 33" role="img" aria-label="QR code for sky.natwong.dev"><rect x="-4" y="-4" width="33" height="33" fill="#FFFFFF"/><path fill="#0F1E2E" d="M0 0h7v1h-7zM8 0h3v1h-3zM12 0h1v1h-1zM14 0h1v1h-1zM18 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM10 1h1v1h-1zM12 1h1v1h-1zM16 1h1v1h-1zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h1v1h-1zM13 2h1v1h-1zM18 2h1v1h-1zM20 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM10 3h4v1h-4zM15 3h2v1h-2zM18 3h1v1h-1zM20 3h3v1h-3zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM10 4h2v1h-2zM14 4h1v1h-1zM16 4h1v1h-1zM18 4h1v1h-1zM20 4h3v1h-3zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM13 5h2v1h-2zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h7v1h-7zM9 7h1v1h-1zM13 7h1v1h-1zM15 7h2v1h-2zM0 8h1v1h-1zM3 8h6v1h-6zM12 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM20 8h1v1h-1zM22 8h3v1h-3zM0 9h1v1h-1zM2 9h1v1h-1zM4 9h1v1h-1zM7 9h1v1h-1zM10 9h1v1h-1zM12 9h4v1h-4zM19 9h5v1h-5zM0 10h2v1h-2zM5 10h2v1h-2zM9 10h1v1h-1zM13 10h1v1h-1zM15 10h1v1h-1zM17 10h1v1h-1zM19 10h1v1h-1zM21 10h1v1h-1zM24 10h1v1h-1zM1 11h3v1h-3zM5 11h1v1h-1zM10 11h3v1h-3zM21 11h4v1h-4zM2 12h5v1h-5zM9 12h1v1h-1zM15 12h1v1h-1zM18 12h1v1h-1zM24 12h1v1h-1zM0 13h3v1h-3zM4 13h1v1h-1zM7 13h4v1h-4zM12 13h6v1h-6zM20 13h1v1h-1zM23 13h1v1h-1zM0 14h2v1h-2zM6 14h1v1h-1zM8 14h2v1h-2zM13 14h3v1h-3zM20 14h5v1h-5zM0 15h1v1h-1zM3 15h3v1h-3zM8 15h3v1h-3zM12 15h1v1h-1zM14 15h1v1h-1zM16 15h4v1h-4zM21 15h2v1h-2zM24 15h1v1h-1zM0 16h1v1h-1zM2 16h1v1h-1zM5 16h2v1h-2zM8 16h2v1h-2zM11 16h3v1h-3zM15 16h6v1h-6zM22 16h2v1h-2zM8 17h4v1h-4zM16 17h1v1h-1zM20 17h1v1h-1zM22 17h2v1h-2zM0 18h7v1h-7zM8 18h2v1h-2zM12 18h2v1h-2zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM24 18h1v1h-1zM0 19h1v1h-1zM6 19h1v1h-1zM8 19h1v1h-1zM10 19h2v1h-2zM13 19h1v1h-1zM15 19h2v1h-2zM20 19h1v1h-1zM23 19h1v1h-1zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM8 20h1v1h-1zM10 20h3v1h-3zM14 20h7v1h-7zM23 20h2v1h-2zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM8 21h3v1h-3zM12 21h1v1h-1zM18 21h1v1h-1zM23 21h2v1h-2zM0 22h1v1h-1zM2 22h3v1h-3zM6 22h1v1h-1zM10 22h4v1h-4zM16 22h2v1h-2zM20 22h5v1h-5zM0 23h1v1h-1zM6 23h1v1h-1zM10 23h3v1h-3zM19 23h2v1h-2zM22 23h3v1h-3zM0 24h7v1h-7zM8 24h7v1h-7zM16 24h2v1h-2zM21 24h1v1h-1zM24 24h1v1h-1z"/></svg>
+      Scan, then point your phone up
     </div>
-  </div>
-
-  <section id="head" class="head" aria-live="polite"></section>
+  </section>
   <button id="cta" class="cta" type="button" hidden>Point your phone at the sky</button>
 
   <svg id="sky" role="img" aria-label="Aircraft positions"></svg>
@@ -112,39 +112,47 @@
     <div id="arcard" class="arcard" hidden><strong id="arname"></strong><span id="armeta" class="meta"></span></div>
   </div>
   <div id="arbar" class="controls" hidden>
+    <button id="closecam" type="button">Back to the sky chart</button>
     <button id="alignsun" type="button" hidden>Line up on the sun</button>
     <button id="alignplane" type="button" hidden></button>
     <button id="realign" type="button">Reset alignment</button>
     <span id="arnudge" class="small muted"></span>
   </div>
-  <div id="key" class="key">
-    <span><svg width="16" height="18" viewBox="-8 -9 16 18" aria-hidden="true"><path d="M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z" fill="#1751C6"/></svg>Live</span>
-    <span><svg width="16" height="18" viewBox="-8 -9 16 18" aria-hidden="true"><path d="M0,-9 L6.5,7 L0,3.5 L-6.5,7 Z" fill="#4A5C70"/></svg>Not heard for a minute</span>
-    <span><svg width="30" height="10" aria-hidden="true"><line x1="0" y1="5" x2="30" y2="5" stroke="#1751C6" stroke-width="2" stroke-dasharray="6 5"/></svg>Next 3 minutes</span>
-    <label class="check"><input id="ground" type="checkbox"> Ground traffic</label>
-  </div>
   <p id="legend" class="legend"></p>
+  <div class="controls">
+    <select id="place" aria-label="Where you are"></select>
+    <button id="showall" type="button" aria-pressed="false">Show all planes in range</button>
+  </div>
 
-  <details id="more" class="card" hidden><summary>Flight details</summary><div id="card" aria-live="polite"></div></details>
-
-  <h2>Coming over next</h2>
+  <h2>Next to come into view</h2>
   <ul id="next" class="list next"></ul>
   <p class="muted small" style="margin-top:8px">If each plane flies straight. Planes turning to land often won't.</p>
 
-  <details><summary id="allsum">All planes in range</summary><ul id="list" class="list"></ul></details>
+  <details id="more" class="card" hidden><summary>Flight details</summary><div id="card"></div></details>
 
-  <section class="gaps">
-    <h2>What this data can't see</h2>
-    <p><strong>Planes without ADS-B.</strong> The FAA requires it in busy airspace and above 10,000 feet, not everywhere.</p>
-    <p><strong>Low planes behind hills.</strong> Receivers need a clear line of sight.</p>
-    <p><strong>Exactly where a plane is now.</strong> Reports are seconds to a minute old. Marks are moved forward in a straight line.</p>
-    <p><strong>Where it's going.</strong> Planes don't broadcast routes, and this page doesn't guess.</p>
-    <p><strong>Some identities.</strong> FAA privacy addresses hide the registration and type.</p>
-    <p><strong>Perfect angles.</strong> They assume an open horizon. Phone compasses drift, so line up on the sun.</p>
-  </section>
+  <details class="card how">
+    <summary>How it decides what you can see</summary>
+    <p>Every 10 seconds the page gets positions from public ADS-B receivers. Each second it moves every plane forward along its heading. A plane counts as one you can see when:</p>
+    <ul>
+      <li>It's at least 10° above the horizon, clear of most trees and roofs.</li>
+      <li>By day, it looks at least 5 arcminutes wide, about a sixth of the Moon. That's a typical wingspan for its size class over its distance from you.</li>
+      <li>At night, its lights are within 25 miles, or 10 miles for small planes and helicopters.</li>
+      <li>It's more than 15° from the sun.</li>
+      <li>Its position is less than a minute old.</li>
+    </ul>
+    <p>These cutoffs are estimates. Haze, clouds, contrails and your eyes all change the answer.</p>
+    <h3>What this data can't see</h3>
+    <ul>
+      <li>Planes without ADS-B. The FAA requires it in busy airspace and above 10,000 feet, not everywhere.</li>
+      <li>Low planes behind hills. Receivers need a clear line of sight.</li>
+      <li>Where a plane is going. Planes don't broadcast routes, and this page doesn't guess.</li>
+      <li>Some identities. FAA privacy addresses hide the registration and type.</li>
+      <li>Perfect angles. Phone compasses drift, so line up on the sun.</li>
+    </ul>
+  </details>
 
   <footer>
-    Aircraft data from <a href="https://www.adsb.lol/">adsb.lol</a>, ODbL 1.0. Airport locations from <a href="https://ourairports.com/">OurAirports</a>. Not for navigation.
+    Made by <a href="https://natwong.dev/">Nat Wong</a>. Aircraft data from <a href="https://www.adsb.lol/">adsb.lol</a>, ODbL 1.0. Not for navigation.
   </footer>
 </main>
 
@@ -155,17 +163,6 @@
     { id: 'KPAO', label: 'Palo Alto Airport (PAO)', title: 'Palo Alto Airport', lat: 37.461102, lon: -122.114998 },
     { id: 'KSFO', label: 'San Francisco International (SFO)', title: 'SFO', lat: 37.619806, lon: -122.374821 },
     { id: 'KSJC', label: 'San Jose International (SJC)', title: 'San Jose Airport', lat: 37.362452, lon: -121.929188 },
-  ];
-  // Coordinates from OurAirports.
-  const AIRPORTS = [
-    { code: 'PAO', lat: 37.461102, lon: -122.114998 },
-    { code: 'SFO', lat: 37.619806, lon: -122.374821 },
-    { code: 'SJC', lat: 37.362452, lon: -121.929188 },
-    { code: 'SQL', lat: 37.51313, lon: -122.250838 },
-    { code: 'OAK', lat: 37.720085, lon: -122.221184 },
-    { code: 'NUQ', lat: 37.4161, lon: -122.049004 },
-    { code: 'HWD', lat: 37.659198761, lon: -122.122001648 },
-    { code: 'RHV', lat: 37.332901, lon: -121.819 },
   ];
   // ICAO airline prefixes seen around the Bay Area, plus common long-haul carriers.
   const AIRLINES = {
@@ -219,15 +216,26 @@
   const STALE_S = 60;          // older positions are gray and not moved forward
   const PROJECT_MAX_S = 90;    // never move a plane forward further than this
   const NEXT_S = 600;          // how far ahead "Coming over next" looks
-  const NEXT_MIN_EL = 30;
   const AHEAD_S = 180;         // the dashed path ahead of the picked plane
-  const LABELS = 5;            // most labels drawn on the sky or map
-  const LOW_EL = 5;            // degrees; lower planes are drawn as dots in the sky view
+  const LABELS = 5;            // most labels drawn on the sky chart
   const KT_MS = 0.514444;      // meters per second in a knot
   const EARTH_M = 6371008.8;
   const SOUND_MS = 340;
   const M_PER_MI = 1609.344;
-  const MAP_MI = 28;           // map radius in statute miles (25 nm is about 28.8 mi)
+
+  // What a person on the ground can pick out. These cutoffs are estimates, not measurements.
+  const MIN_EL = 10;           // degrees; lower than this is usually behind trees and roofs
+  const MIN_ARCMIN = 5;        // by day, the smallest apparent wingspan counted as spottable
+  const NIGHT_MI = 25;         // at night, how far lights count; small planes use NIGHT_SMALL_MI
+  const NIGHT_SMALL_MI = 10;
+  const SUN_CLEAR = 15;        // degrees; closer to the sun than this is lost in glare
+  const MOON_ARCMIN = 31;      // the Moon's average apparent width
+  const ARCMIN_PER_RAD = 3437.75;
+  // Typical wingspan in meters for each ADS-B emitter category, from a common aircraft in it:
+  // A1 Cessna 172, A2 CRJ200, A3 Airbus A320 and Boeing 737, A4 Boeing 757, A5 Boeing 787 and 777,
+  // A7 the rotor of a Robinson R44.
+  const SPAN_M = { A1: 11, A2: 21, A3: 35, A4: 38, A5: 62, A6: 10, A7: 10, B1: 15, B2: 15, B4: 10, B6: 3 };
+  const SMALL = new Set(['A1', 'A6', 'A7', 'B1', 'B4', 'B6']);
 
   const $ = (id) => document.getElementById(id);
   const svg = $('sky');
@@ -238,10 +246,13 @@
   const state = {
     obs: PLACES[0],
     view: 'sky',
-    showGround: false,
+    showAll: false,          // draw planes you can't see too
     aircraft: [],
     trails: new Map(),       // hex -> [{lat, lon, t}]
     selected: null,
+    picked: false,           // the reader chose the selected plane
+    sun: { az: 0, el: -90 },
+    next: [],
     wanted: null,            // plane named in a shared link, picked once data arrives
     notice: '',
     updatedAt: null,
@@ -315,6 +326,34 @@
   }
   function updatePositions(atMs) {
     state.aircraft.forEach((p) => locate(p, atMs));
+  }
+
+  // Angle between two directions in the sky, in degrees.
+  function apart(az1, el1, az2, el2) {
+    const c = Math.sin(rad(el1)) * Math.sin(rad(el2)) + Math.cos(rad(el1)) * Math.cos(rad(el2)) * Math.cos(rad(az1 - az2));
+    return deg(Math.acos(Math.max(-1, Math.min(1, c))));
+  }
+  // Could a person standing at the observer pick this plane out with their eyes?
+  function sight(el, slant, brg, cat, sun) {
+    const arcmin = (SPAN_M[cat] || SPAN_M.A1) / slant * ARCMIN_PER_RAD;
+    const out = (why) => ({ ok: false, arcmin, why });
+    if (el < MIN_EL) return out(`Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`);
+    if (sun.el > 0 && apart(brg, el, sun.az, sun.el) < SUN_CLEAR) return out('Lost in the sun\'s glare.');
+    // After civil twilight the sky is dark enough that lights carry further than shapes.
+    if (sun.el < -6) {
+      const mi = SMALL.has(cat) || !SPAN_M[cat] ? NIGHT_SMALL_MI : NIGHT_MI;
+      return slant <= mi * M_PER_MI ? { ok: true, arcmin, lights: true } : out('Too far for its lights to stand out.');
+    }
+    return arcmin >= MIN_ARCMIN ? { ok: true, arcmin } : out('Too small to spot at this distance.');
+  }
+  function judge(p) {
+    if (p.onGround) return { ok: false, arcmin: 0, why: 'On the ground.' };
+    if (p.since > STALE_S) return { ok: false, arcmin: 0, why: 'Not heard for over a minute, so its position is unsure.' };
+    return sight(p.el, p.slant, p.brg, p.raw.category, state.sun);
+  }
+  // Easiest to spot first: the one that looks biggest.
+  function byEase(a, b) {
+    return (b.see.ok - a.see.ok) || (b.see.arcmin - a.see.arcmin);
   }
 
   function rememberTrail(a, nowMs) {
@@ -399,44 +438,60 @@
   }
 
   // ---------- rendering ----------
+  // The planes to draw: the ones you can see, or every one in the air, plus the picked plane.
   function visible() {
-    return state.aircraft.filter((p) => state.showGround || !p.onGround);
+    return state.aircraft.filter((p) => p.hex === state.selected || (state.showAll ? !p.onGround : p.see.ok));
   }
+  const seeable = () => state.aircraft.filter((p) => p.see.ok);
 
   function render() {
     updatePositions(Date.now());
+    state.sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
+    state.aircraft.forEach((p) => { p.see = judge(p); });
+    state.next = upcoming();
     // A shared link names a plane; pick it once the first update arrives.
     if (state.wanted && state.updatedAt) {
-      if (state.aircraft.some((a) => a.hex === state.wanted)) state.selected = state.wanted;
+      if (state.aircraft.some((a) => a.hex === state.wanted)) { state.selected = state.wanted; state.picked = true; }
       else state.notice = 'The plane in that link has left the area.';
       state.wanted = null;
     }
-    // Default to the plane highest in the sky until the reader picks one.
-    if (!state.selected || !state.aircraft.some((a) => a.hex === state.selected)) {
-      const best = state.aircraft.filter((a) => !a.onGround).sort((a, b) => b.el - a.el)[0];
-      state.selected = best ? best.hex : null;
+    // Until the reader picks one, show the easiest plane to spot, or else the next one coming.
+    const pool = seeable().sort(byEase);
+    const gone = !state.aircraft.some((a) => a.hex === state.selected);
+    const stale = !state.picked && pool.length && !pool.some((a) => a.hex === state.selected);
+    if (!state.selected || gone || stale) {
+      state.selected = pool[0] ? pool[0].hex : (state.next[0] ? state.next[0].p.hex : null);
+      state.picked = false;
     }
     renderStatus();
     renderChart();
     renderHead();
     renderCard();
     renderNext();
-    renderList();
   }
 
   function renderStatus() {
-    const el = $('status');
+    const el = $('status'), title = $('title');
     const air = state.aircraft.filter((p) => !p.onGround).length;
-    const gnd = state.aircraft.length - air;
-    const time = state.updatedAt ? state.updatedAt.toLocaleTimeString('en-US') : null;
+    const n = seeable().length;
+    title.replaceChildren();
+    if (state.updatedAt) {
+      const num = document.createElement('span');
+      num.className = 'n';
+      num.textContent = n ? String(n) : 'No';
+      title.append(num, ` plane${n === 1 ? '' : 's'} you can see from ${state.obs.title}`);
+    } else title.textContent = `Planes you can see from ${state.obs.title}`;
+    const all = $('showall');
+    all.setAttribute('aria-pressed', String(state.showAll));
+    all.textContent = state.showAll ? `Show only the ${n} you can see` : `Show all ${air} in range`;
     if (state.error) {
       el.className = 'status error';
       el.textContent = `No answer from the data source (${state.error}). Trying again.`;
       return;
     }
     el.className = 'status';
-    if (!time) { el.textContent = 'Finding planes.'; return; }
-    el.textContent = `Live · ${air} planes in the air within 29 miles${state.showGround ? `, ${gnd} on the ground` : ''}` +
+    if (!state.updatedAt) { el.textContent = 'Finding planes.'; return; }
+    el.textContent = `Live · ${n} of ${air} planes within 29 miles` +
       (state.notice ? `. ${state.notice}` : '');
   }
 
@@ -460,8 +515,8 @@
     svg.style.display = camera ? 'none' : '';
     $('ar').hidden = !camera;
     $('arbar').hidden = !camera;
-    $('key').hidden = camera;
     $('cta').hidden = camera || !isPhone;
+    $('qr').hidden = camera || isPhone;
     if (camera) { drawAR(); return; }
     $('legend').textContent = '';
     const { w, h } = size();
@@ -469,69 +524,45 @@
     svg.replaceChildren();
     const cx = w / 2, cy = h / 2, R = w / 2 - 34;
 
-    // Position on screen for a lat/lon, in the current view.
-    const place = state.view === 'sky'
-      ? (lat, lon, ft) => {
-          const { d, brg } = geo(state.obs, lat, lon);
-          const el = Math.max(0, elevation(d, ft * 0.3048));
-          const r = R * (90 - el) / 90, a = rad(brg);
-          return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
-        }
-      : (lat, lon) => {
-          const { d, brg } = geo(state.obs, lat, lon);
-          const r = R * (d / M_PER_MI) / MAP_MI, a = rad(brg);
-          return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
-        };
+    // Position on the sky chart: overhead in the middle, the horizon at the rim.
+    const at = (brg, el) => {
+      const r = R * (90 - Math.max(0, el)) / 90, a = rad(brg);
+      return { x: cx + r * Math.sin(a), y: cy - r * Math.cos(a) };
+    };
+    const place = (lat, lon, ft) => {
+      const { d, brg } = geo(state.obs, lat, lon);
+      return at(brg, elevation(d, ft * 0.3048));
+    };
 
     const g = svgEl('g', {});
     svg.append(g);
     const line = '#E4EAF1', muted = '#4A5C70', text = '#0F1E2E', accent = '#1751C6';
 
-    if (state.view === 'sky') {
-      [0, 30, 60].forEach((e) => {
-        const r = R * (90 - e) / 90;
-        g.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: e === 0 ? muted : line, 'stroke-width': 1 }));
-        if (e) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${e}°`));
-      });
-      // Say what the circle means inside the picture, not in a paragraph under it.
-      g.append(svgEl('circle', { cx, cy, r: 3, fill: muted }));
-      g.append(svgEl('text', { x: cx, y: cy + 22, fill: muted, 'text-anchor': 'middle' }, 'Overhead'));
-      g.append(svgEl('text', { x: cx, y: cy + R - 10, fill: muted, 'text-anchor': 'middle' }, 'Horizon'));
-      ['N', 'E', 'S', 'W'].forEach((c, i) => {
-        const a = rad(i * 90);
-        g.append(svgEl('text', {
-          x: cx + (R + 18) * Math.sin(a), y: cy - (R + 18) * Math.cos(a) + 6,
-          fill: c === 'N' ? text : muted, 'text-anchor': 'middle', 'font-weight': c === 'N' ? 600 : 400,
-        }, c));
-      });
-    } else {
-      [5, 10, 15, 20, 25].forEach((mi) => {
-        const r = R * mi / MAP_MI;
-        g.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: line, 'stroke-width': 1 }));
-        if (mi === 10 || mi === 20) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${mi} mi`));
-      });
-      g.append(svgEl('text', { x: cx, y: 22, fill: text, 'text-anchor': 'middle', 'font-weight': 600 }, 'N'));
-      const apBoxes = [...g.querySelectorAll('text')].map((t) => t.getBBox());
-      AIRPORTS.forEach((ap) => {
-        const { d } = geo(state.obs, ap.lat, ap.lon);
-        if (d / M_PER_MI > MAP_MI) return;
-        const p = place(ap.lat, ap.lon);
-        g.append(svgEl('rect', { x: p.x - 4, y: p.y - 4, width: 8, height: 8, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
-        const t = svgEl('text', { x: p.x + 8, y: p.y + 5, fill: muted }, ap.code);
-        g.append(t);
-        // Drop an airport code that would sit on top of a ring label or another code.
-        const b = t.getBBox();
-        if (apBoxes.some((o) => b.x < o.x + o.width && b.x + b.width > o.x && b.y < o.y + o.height && b.y + b.height > o.y)) t.remove();
-        else apBoxes.push(b);
-      });
-      g.append(svgEl('circle', { cx, cy, r: 4, fill: text }));
-      g.append(svgEl('text', { x: cx + 8, y: cy - 8, fill: text, 'font-weight': 600 }, 'You'));
+    [0, 30, 60].forEach((e) => {
+      const r = R * (90 - e) / 90;
+      g.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: e === 0 ? muted : line, 'stroke-width': 1 }));
+      if (e) g.append(svgEl('text', { x: cx + 4, y: cy - r + 18, fill: muted }, `${e}°`));
+    });
+    // Say what the circle means inside the picture, not in a paragraph under it.
+    g.append(svgEl('circle', { cx, cy, r: 3, fill: muted }));
+    g.append(svgEl('text', { x: cx, y: cy + 22, fill: muted, 'text-anchor': 'middle' }, 'Overhead'));
+    g.append(svgEl('text', { x: cx, y: cy + R - 10, fill: muted, 'text-anchor': 'middle' }, 'Horizon'));
+    ['N', 'E', 'S', 'W'].forEach((c, i) => {
+      const a = rad(i * 90);
+      g.append(svgEl('text', {
+        x: cx + (R + 18) * Math.sin(a), y: cy - (R + 18) * Math.cos(a) + 6,
+        fill: c === 'N' ? text : muted, 'text-anchor': 'middle', 'font-weight': c === 'N' ? 600 : 400,
+      }, c));
+    });
+    // The sun, since planes near it are lost in the glare.
+    if (state.sun.el > 0) {
+      const s = at(state.sun.az, state.sun.el);
+      g.append(svgEl('circle', { cx: s.x, cy: s.y, r: 10, fill: 'none', stroke: text, 'stroke-width': 2 }));
+      g.append(svgEl('text', { x: s.x, y: s.y + 30, fill: muted, 'text-anchor': 'middle' }, 'Sun'));
     }
 
-    const planes = visible().filter((p) => state.view === 'map' ? p.d / M_PER_MI <= MAP_MI : true);
-    const order = planes.slice().sort((a, b) =>
-      (b.hex === state.selected) - (a.hex === state.selected) ||
-      (state.view === 'sky' ? b.el - a.el : a.d - b.d));
+    const planes = visible();
+    const order = planes.slice().sort((a, b) => (b.hex === state.selected) - (a.hex === state.selected) || byEase(a, b));
     const boxes = [];
 
     // Trails first, so marks sit on top. Each trail runs from past reports to where the plane is now.
@@ -560,21 +591,17 @@
       // Point the mark along the track as it appears in this view.
       let angle = 0;
       if (p.track != null) {
-        if (state.view === 'map') angle = p.track;
-        else {
-          const ahead = project(p.lat, p.lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
-          const q2 = place(ahead.lat, ahead.lon, p.ftNow);
-          angle = deg(Math.atan2(q2.x - q.x, -(q2.y - q.y)));
-        }
+        const ahead = project(p.lat, p.lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
+        const q2 = place(ahead.lat, ahead.lon, p.ftNow);
+        angle = deg(Math.atan2(q2.x - q.x, -(q2.y - q.y)));
       }
       const isSel = p.hex === state.selected;
-      const old = p.since > STALE_S || !p.moved;
-      const color = old || p.onGround ? muted : accent;
+      const color = p.see.ok ? accent : muted;
       const mark = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex, style: 'cursor:pointer' });
       mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
-      if (isSel) mark.append(svgEl('circle', { r: 18, fill: 'none', stroke: accent, 'stroke-width': 2.5 }));
-      // Planes this low are hard to see from the ground, so they get a small dot, not an arrow.
-      if (state.view === 'sky' && !isSel && !p.onGround && p.el < LOW_EL) {
+      if (isSel) mark.append(svgEl('circle', { r: 18, fill: 'none', stroke: color, 'stroke-width': 2.5 }));
+      // Planes you can't see get a small dot, not an arrow.
+      if (!isSel && !p.see.ok) {
         mark.append(svgEl('circle', { r: 3, fill: color }));
         g.append(mark);
         return;
@@ -590,9 +617,15 @@
     // Skip any that would overlap another label or a fixed label.
     const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     g.querySelectorAll('text').forEach((t) => { const b = t.getBBox(); boxes.push({ x: b.x - 2, y: b.y, w: b.width + 4, h: b.height }); });
+    // Labels keep off every mark too, not just other labels.
+    planes.forEach((p) => {
+      const q = place(p.lat, p.lon, p.ftNow);
+      const r = p.hex === state.selected ? 19 : (p.see.ok ? 10 : 4);
+      boxes.push({ x: q.x - r, y: q.y - r, w: 2 * r, h: 2 * r });
+    });
     let labeled = 0;
     order.forEach((p) => {
-      if (labeled >= LABELS) return;
+      if (labeled >= LABELS || (!p.see.ok && p.hex !== state.selected)) return;
       const q = place(p.lat, p.lon, p.ftNow);
       const l1 = p.callsign || p.raw.r || p.hex.toUpperCase();
       const l2 = p.onGround ? 'ground' : (p.altFt != null ? `${fmt(p.altFt)} ft` : '?');
@@ -605,9 +638,10 @@
       g.append(t);
       const bw = t.getBBox().width, bh = 40;
       // Try right, left, above and below the mark; keep the first spot that fits and is free.
+      const off = isSel ? 22 : 14;   // clear of the ring around the picked plane
       const spots = [
-        { x: q.x + 14, y: q.y - 18 }, { x: q.x - 14 - bw, y: q.y - 18 },
-        { x: q.x - bw / 2, y: q.y - 14 - bh }, { x: q.x - bw / 2, y: q.y + 14 },
+        { x: q.x + off, y: q.y - 18 }, { x: q.x - off - bw, y: q.y - 18 },
+        { x: q.x - bw / 2, y: q.y - off - bh }, { x: q.x - bw / 2, y: q.y + off },
       ].map((s) => ({ x: s.x, y: s.y, w: bw, h: bh }))
         .filter((s) => s.x >= 4 && s.x + bw <= w - 4 && s.y >= 4 && s.y + bh <= h - 4);
       const free = (box) => !boxes.some((b) => overlaps(box, b));
@@ -630,20 +664,35 @@
     head.append(words);
     const line = (cls, text) => { const e = document.createElement('p'); e.className = cls; e.textContent = text; words.append(e); };
     if (!p) {
-      line('sub', state.updatedAt ? 'No planes in the air nearby right now.' : 'Finding planes overhead.');
+      line('sub', state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : 'Finding planes overhead.');
       return;
     }
     line('name', nameOf(p));
     line('sub', typeOf(p));
     line('sub', p.onGround ? 'On the ground' :
       `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'Altitude unknown'} · ${(p.d / M_PER_MI).toFixed(1)} mi away`);
-    if (!p.onGround) head.append(lookGlyph(p));
+    // How it will look, or why you can't see it yet.
+    const soon = state.next.find((n) => n.p.hex === p.hex);
+    if (p.see.ok) line('sub', p.see.lights ? 'Look for its lights' : sizeText(p.see.arcmin));
+    else if (soon) line('sub', `Comes into view in about ${Math.max(1, Math.round(soon.t / 60))} min`);
+    else line('sub', p.see.why);
+    if (p.see.ok) head.append(lookGlyph(p.brg, p.el, lookText(p)));
+    else if (soon) head.append(lookGlyph(soon.brg, soon.el, `It will appear ${Math.round(soon.el)}° up, toward the ${compassWord(soon.brg)}.`));
+  }
+
+  // Apparent size, against something everyone has seen.
+  function sizeText(arcmin) {
+    const k = arcmin / MOON_ARCMIN;
+    if (k >= 1.25) return 'Looks wider than the Moon';
+    if (k >= 0.75) return 'Looks about as wide as the Moon';
+    return `Looks about 1/${Math.round(1 / k)} as wide as the Moon`;
   }
 
   // Where to look, as a picture: a compass arrow for the direction and a tilt for the angle.
-  function lookGlyph(p) {
+  function lookGlyph(brg, el, label) {
     const muted = '#4A5C70', text = '#0F1E2E', accent = '#1751C6';
-    const s = svgEl('svg', { width: 150, height: 94, viewBox: '0 0 150 94', role: 'img', 'aria-label': lookText(p) });
+    const p = { brg, el };
+    const s = svgEl('svg', { width: 150, height: 94, viewBox: '0 0 150 94', role: 'img', 'aria-label': label });
     const cx = 34, cy = 42, r = 26, a = rad(p.brg);
     s.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
     s.append(svgEl('text', { x: cx, y: 12, fill: muted, 'text-anchor': 'middle' }, 'N'));
@@ -673,6 +722,9 @@
       ['Altitude', motionText(p)],
       ['Speed', p.gs != null ? `${fmt(p.gs * 1.15078)} mph` : 'Not in feed'],
       ['Distance', `${mi.toFixed(1)} mi, ${slantMi.toFixed(1)} mi in a straight line`],
+      ['Can you see it', p.see.ok ? (p.see.lights ? 'Yes, by its lights' : 'Yes') : `Not now. ${p.see.why}`],
+      ['Size in the sky', p.onGround ? 'On the ground' :
+        `${p.see.arcmin.toFixed(1)} arcminutes, from a typical ${SPAN_M[p.raw.category] || SPAN_M.A1} m wingspan for its class`],
       ['Route', 'Not broadcast'],
       ['Heard', `${Math.round(p.since)} s ago, ${src}`],
     ];
@@ -711,23 +763,22 @@
     }
   }
 
-  // Planes on course to pass high over the observer soon, if each keeps its heading, speed and climb.
+  // Planes you can't see yet that will come into view soon, if each keeps its heading, speed and
+  // climb. Reports where each one first appears.
   function upcoming() {
     const out = [];
     state.aircraft.forEach((p) => {
-      if (!p.moved || p.since > STALE_S || p.gs < 60) return;
+      if (p.see.ok || !p.moved || p.since > STALE_S || p.gs < 60) return;
       const rate = p.raw.baro_rate ?? p.raw.geom_rate;
-      let best = { el: p.el, t: 0 };
       for (let t = 15; t <= NEXT_S; t += 15) {
         const ft = p.ftNow + (typeof rate === 'number' ? rate * t / 60 : 0);
-        if (ft <= 0) break;
+        if (ft <= 0) return;
         const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * t);
         const { d, brg } = geo(state.obs, to.lat, to.lon);
-        const el = elevation(d, ft * 0.3048);
-        if (el > best.el) best = { el, t, brg, ft };
+        const h = ft * 0.3048, el = elevation(d, h);
+        const slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
+        if (sight(el, slant, brg, p.raw.category, state.sun).ok) { out.push({ p, t, el, brg, ft }); return; }
       }
-      // Skip planes already at their highest, and ones still rising when the look-ahead ends.
-      if (best.t >= 30 && best.t < NEXT_S && best.el >= NEXT_MIN_EL) out.push({ p, ...best });
     });
     return out.sort((a, b) => a.t - b.t).slice(0, 3);
   }
@@ -735,12 +786,12 @@
   function renderNext() {
     const ul = $('next');
     ul.replaceChildren();
-    const list = upcoming();
+    const list = state.next;
     if (!list.length) {
       const li = document.createElement('li');
       li.className = 'muted small';
       li.style.padding = '10px 4px';
-      li.textContent = state.updatedAt ? 'Nothing on course to pass high over you in the next 10 minutes.' : 'Waiting for the first update.';
+      li.textContent = state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : 'Waiting for the first update.';
       ul.append(li);
       return;
     }
@@ -762,42 +813,6 @@
       meta.textContent = `${Math.round(el)}° up ${compassShort(brg)} · ${fmt(Math.round(ft / 100) * 100)} ft`;
       right.append(who, meta);
       b.append(when, right);
-      li.append(b);
-      ul.append(li);
-    });
-  }
-
-  function renderList() {
-    const ul = $('list');
-    const planes = visible().slice().sort((a, b) => a.d - b.d);
-    $('allsum').textContent = `All ${planes.length} planes in range`;
-    ul.replaceChildren();
-    if (!planes.length) {
-      const li = document.createElement('li');
-      li.className = 'muted small';
-      li.style.padding = '10px 4px';
-      li.textContent = state.updatedAt ? 'No aircraft in range right now.' : 'Waiting for the first update.';
-      ul.append(li);
-      return;
-    }
-    planes.forEach((p) => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.hex = p.hex;
-      if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
-      const who = document.createElement('span');
-      who.className = 'who';
-      who.textContent = `${nameOf(p)} · ${typeOf(p)}`;
-      const meta = document.createElement('span');
-      meta.className = 'meta';
-      const where = p.onGround ? 'on the ground' : `${Math.round(Math.max(p.el, 0))}° up ${compassShort(p.brg)}`;
-      meta.textContent = [
-        p.onGround ? null : (p.altFt != null ? `${fmt(p.altFt)} ft` : null),
-        `${(p.d / M_PER_MI).toFixed(1)} mi`,
-        where,
-      ].filter(Boolean).join(' · ');
-      b.append(who, meta);
       li.append(b);
       ul.append(li);
     });
@@ -1025,7 +1040,7 @@
     if (ar.held && (ar.held !== state.selected || (aimed && aimed.p.hex === ar.held))) ar.held = null;
     if (aimed && !ar.held) {
       ar.aimedOnce = true;
-      if (aimed.p.hex !== state.selected) { state.selected = aimed.p.hex; renderCard(); renderNext(); renderList(); }
+      if (aimed.p.hex !== state.selected) { state.selected = aimed.p.hex; state.picked = true; renderHead(); renderCard(); renderNext(); }
     }
     const sel = planes.find((p) => p.hex === state.selected);
     placed.sort((a, b) => (b.p.hex === state.selected) - (a.p.hex === state.selected) || a.p.d - b.p.d);
@@ -1039,8 +1054,7 @@
     const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     placed.slice().reverse().forEach(({ p, q }) => {
       const isSel = p.hex === state.selected;
-      const old = p.since > STALE_S || !p.moved;
-      const color = old || p.onGround ? muted : accent;
+      const color = p.see.ok ? accent : muted;
       const m = svgEl('g', { transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, 'data-hex': p.hex });
       m.append(svgEl('circle', { r: 24, fill: 'transparent' }));
       m.append(svgEl('circle', { r: isSel ? 15 : 11, fill: 'none', stroke: white, 'stroke-width': 5 }));
@@ -1163,6 +1177,7 @@
   // ---------- interaction ----------
   function select(hex) {
     state.selected = hex;
+    state.picked = true;
     state.notice = '';
     render();
   }
@@ -1170,10 +1185,10 @@
     const g = e.target.closest('[data-hex]');
     if (g) select(g.getAttribute('data-hex'));
   });
-  ['list', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
+  $('next').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-hex]');
-    if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : $('head')).scrollIntoView({ block: 'start' }); }
-  }));
+    if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : $('title')).scrollIntoView({ block: 'start' }); }
+  });
 
   const placeSel = $('place');
   PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));
@@ -1185,7 +1200,7 @@
     if (!navigator.geolocation) { back(); $('status').textContent = 'This browser can\'t share a location.'; return; }
     $('status').textContent = 'Finding you. Rounded to about 1 km before it leaves your phone.';
     navigator.geolocation.getCurrentPosition((pos) => {
-      setObserver({ id: 'me', label: 'My location', title: 'you', lat: pos.coords.latitude, lon: pos.coords.longitude });
+      setObserver({ id: 'me', label: 'My location', title: 'where you are', lat: pos.coords.latitude, lon: pos.coords.longitude });
     }, (err) => {
       back();
       $('status').textContent = `Couldn't get your location (${err.message}).`;
@@ -1194,6 +1209,7 @@
   function setObserver(obs) {
     state.obs = obs;
     state.selected = null;
+    state.picked = false;
     state.notice = '';
     // Keep the address shareable: listed places go in it, "My location" never does.
     const url = new URL(location.pathname, location.origin);
@@ -1202,8 +1218,7 @@
     state.aircraft = [];
     state.trails.clear();
     state.updatedAt = null;
-    $('title').textContent = `Above ${obs.title} now`;
-    document.title = `Sky over ${obs.title}`;
+    document.title = obs.id === 'me' ? 'Sky over you' : `Sky over ${obs.title}`;
     render();
     schedule();
   }
@@ -1213,16 +1228,15 @@
   function setView(view) {
     const was = state.view;
     state.view = view;
-    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.view === view)));
     // Start the camera inside the tap: iOS only asks for motion access from a tap.
     if (view === 'camera' && was !== 'camera') startCamera(true);
     if (view !== 'camera' && was === 'camera') stopCamera();
     render();
   }
-  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+  $('closecam').addEventListener('click', () => { setView('sky'); $('title').scrollIntoView({ block: 'start' }); });
   $('cta').addEventListener('click', () => { setView('camera'); $('ar').scrollIntoView({ block: 'start' }); });
 
-  $('ground').addEventListener('change', (e) => { state.showGround = e.target.checked; render(); });
+  $('showall').addEventListener('click', () => { state.showAll = !state.showAll; render(); });
 
   let wakeLock = null;
   async function keepAwake() {
@@ -1233,6 +1247,11 @@
     if (state.view === 'camera') { if (shown) startCamera(false); else stopCamera(); }
     schedule();
   });
+
+  // Between updates, move the planes along every second.
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && state.view === 'sky' && state.aircraft.length) renderChart();
+  }, 1000);
 
   let resizeTimer = 0;
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 150); });
