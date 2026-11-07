@@ -373,17 +373,23 @@
     state.trails.set(a.hex, list);
   }
 
+  // One request at a time. If the reader moves while one is on its way, it is cancelled and the
+  // new place is asked for straight away.
+  let inflight = null;   // { obs, ctrl }
   async function load() {
-    if (load.busy) return;
-    load.busy = true;
     const obs = state.obs;
+    if (inflight) {
+      if (inflight.obs === obs) return;
+      inflight.ctrl.abort();
+    }
+    const req = inflight = { obs, ctrl: new AbortController() };
     // Only a rounded location (about 1 km) leaves the browser.
-    const url = `/api/aircraft?lat=${state.obs.lat.toFixed(2)}&lon=${state.obs.lon.toFixed(2)}&nm=${NM}`;
+    const url = `/api/aircraft?lat=${obs.lat.toFixed(2)}&lon=${obs.lon.toFixed(2)}&nm=${NM}`;
     try {
-      const r = await fetch(url, { cache: 'no-store' });
+      const r = await fetch(url, { cache: 'no-store', signal: req.ctrl.signal });
       const j = await r.json().catch(() => ({}));
+      if (req !== inflight) return;
       if (!r.ok) throw new Error(j.error || `status ${r.status}`);
-      if (state.obs !== obs) return;   // the reader moved while this was on its way
       const fetchedAt = Date.now();
       const withPos = (j.ac || []).filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number');
       withPos.forEach((a) => rememberTrail(a, j.now || fetchedAt));
@@ -394,12 +400,10 @@
       state.updatedAt = new Date(fetchedAt);
       state.error = '';
     } catch (e) {
-      if (state.obs === obs) state.error = e.message || 'unknown error';
+      if (req === inflight) state.error = e.message || 'unknown error';
     } finally {
-      load.busy = false;
-      // An answer for a place the reader has left is dropped; ask again for the new place now.
-      if (state.obs !== obs) load();
-      else render();
+      // A cancelled request has already been replaced; only the current one renders.
+      if (req === inflight) { inflight = null; render(); }
     }
   }
 
