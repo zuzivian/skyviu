@@ -105,7 +105,7 @@
   </section>
   <button id="cta" class="cta" type="button" hidden>Point your phone at the sky</button>
 
-  <svg id="sky" role="img" aria-label="Aircraft positions"></svg>
+  <svg id="sky" role="img" aria-label="Sky chart of aircraft positions. The planes you can see are also listed below it."></svg>
   <div id="ar" class="ar" hidden>
     <video id="cam" playsinline muted autoplay></video>
     <svg id="arsvg" role="img" aria-label="Camera view with aircraft labels"></svg>
@@ -124,6 +124,9 @@
     <select id="place" aria-label="Where you are"></select>
     <button id="showall" type="button" aria-pressed="false">Show all planes in range</button>
   </div>
+
+  <h2>Planes you can see now</h2>
+  <ul id="now" class="list"></ul>
 
   <h2>Also in the sky</h2>
   <ul id="also" class="list"></ul>
@@ -485,6 +488,7 @@
     renderChart();
     renderHead();
     renderCard();
+    renderNow();
     renderNext();
     renderAlso();
     if (focusKey && !document.activeElement.dataset.focus) {
@@ -831,6 +835,40 @@
       }
     });
     return out.sort((a, b) => a.t - b.t).slice(0, 3);
+  }
+
+  // The planes you can see, as buttons, so picking one doesn't need a pointer on the chart.
+  function renderNow() {
+    const ul = $('now');
+    ul.replaceChildren();
+    const list = seeable().sort(byEase);
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'muted small';
+      li.style.padding = '10px 4px';
+      li.textContent = state.updatedAt ? 'None right now.' : 'Waiting for the first update.';
+      ul.append(li);
+      return;
+    }
+    list.forEach((p) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.hex = p.hex;
+      b.dataset.focus = `now-${p.hex}`;
+      if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = nameOf(p);
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = `${Math.round(p.el)}° up ${compassShort(p.brg)} · ` +
+        `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'altitude unknown'} · ` +
+        (p.see.lights ? 'look for its lights' : sizeText(p.see.arcmin).toLowerCase());
+      b.append(who, meta);
+      li.append(b);
+      ul.append(li);
+    });
   }
 
   function renderNext() {
@@ -1603,10 +1641,10 @@
     const g = e.target.closest('[data-hex]');
     if (g) select(g.getAttribute('data-hex'));
   });
-  $('next').addEventListener('click', (e) => {
+  ['now', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button[data-hex]');
     if (b) { select(b.dataset.hex); (state.view === 'camera' ? $('ar') : $('title')).scrollIntoView({ block: 'start' }); }
-  });
+  }));
 
   const placeSel = $('place');
   PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));

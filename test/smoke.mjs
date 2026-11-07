@@ -9,20 +9,18 @@ const { chromium } = require('playwright');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ORIGIN = 'http://skyviu.test';
 
-// One airliner 60° up due north of whatever point was asked for, so it counts as visible
-// day or night and is far from the sun.
-function planeNear(lat, lon, flight, hex) {
-  const northM = 6096 / Math.tan(Math.PI / 3);
+// An airliner at 20,000 ft, `elDeg` up due north of the point asked for. High and north keeps
+// it visible day or night and far from the sun.
+function airliner(lat, lon, flight, hex, elDeg = 60) {
+  const northM = 6096 / Math.tan(elDeg * Math.PI / 180);
   return {
-    now: Date.now(),
-    ac: [{
-      hex, flight, lat: lat + northM / 111195, lon, alt_baro: 20000, alt_geom: 20000,
-      gs: 300, track: 90, category: 'A3', t: 'B738', r: 'N1', seen_pos: 0, type: 'adsb_icao',
-    }],
+    hex, flight, lat: lat + northM / 111195, lon, alt_baro: 20000, alt_geom: 20000,
+    gs: 300, track: 90, category: 'A3', t: 'B738', r: 'N1', seen_pos: 0, type: 'adsb_icao',
   };
 }
+const planeNear = (lat, lon, flight, hex) => ({ now: Date.now(), ac: [airliner(lat, lon, flight, hex)] });
 
-async function open(browser, { holdFirstStanford = 0 } = {}) {
+async function open(browser, { holdFirstStanford = 0, stanford = planeNear } = {}) {
   const page = await browser.newPage();
   const errors = [];
   const calls = [];
@@ -39,7 +37,7 @@ async function open(browser, { holdFirstStanford = 0 } = {}) {
     calls.push(sjc ? 'sjc' : 'stanford');
     if (!sjc && stanfordCalls++ === 0 && holdFirstStanford) await new Promise((ok) => setTimeout(ok, holdFirstStanford));
     try {
-      await r.fulfill({ json: sjc ? planeNear(lat, lon, 'SWA2', 'a00002') : planeNear(lat, lon, 'UAL1', 'a00001') });
+      await r.fulfill({ json: sjc ? planeNear(lat, lon, 'SWA2', 'a00002') : stanford(lat, lon, 'UAL1', 'a00001') });
     } catch { /* the page cancelled this request */ }
   });
   await page.goto(`${ORIGIN}/`);
@@ -65,6 +63,24 @@ const tests = {
     assert.match(await page.textContent('#head'), /Southwest Airlines 2/);
     assert.equal(calls[0], 'stanford');
     assert.equal(calls[1], 'sjc');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'the planes you can see are buttons, and focus survives a refresh'(browser) {
+    const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 70), airliner(lat, lon, 'UAL3', 'a00003', 40)] });
+    const { page, errors } = await open(browser, { stanford: two });
+    await page.waitForSelector('#now button[data-hex="a00003"]');
+    assert.equal(await page.locator('#now button').count(), 2);
+    // The easiest to spot is picked first.
+    assert.match(await page.textContent('#head'), /United Airlines 1/);
+    await page.focus('#now button[data-hex="a00003"]');
+    await page.keyboard.press('Enter');
+    assert.match(await page.textContent('#head'), /United Airlines 3/);
+    assert.equal(await page.getAttribute('#now button[data-hex="a00003"]', 'aria-current'), 'true');
+    assert.equal(await page.getAttribute('#now button[data-hex="a00001"]', 'aria-current'), null);
+    await page.waitForTimeout(10500);   // one refresh
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.focus), 'now-a00003');
+    assert.match(await page.textContent('#head'), /United Airlines 3/);
     assert.deepEqual(errors, []);
   },
 };
