@@ -376,12 +376,14 @@
   async function load() {
     if (load.busy) return;
     load.busy = true;
+    const obs = state.obs;
     // Only a rounded location (about 1 km) leaves the browser.
     const url = `/api/aircraft?lat=${state.obs.lat.toFixed(2)}&lon=${state.obs.lon.toFixed(2)}&nm=${NM}`;
     try {
       const r = await fetch(url, { cache: 'no-store' });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || `status ${r.status}`);
+      if (state.obs !== obs) return;   // the reader moved while this was on its way
       const fetchedAt = Date.now();
       const withPos = (j.ac || []).filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number');
       withPos.forEach((a) => rememberTrail(a, j.now || fetchedAt));
@@ -392,10 +394,12 @@
       state.updatedAt = new Date(fetchedAt);
       state.error = '';
     } catch (e) {
-      state.error = e.message || 'unknown error';
+      if (state.obs === obs) state.error = e.message || 'unknown error';
     } finally {
       load.busy = false;
-      render();
+      // An answer for a place the reader has left is dropped; ask again for the new place now.
+      if (state.obs !== obs) load();
+      else render();
     }
   }
 
@@ -453,6 +457,8 @@
   const seeable = () => state.aircraft.filter((p) => p.see.ok);
 
   function render() {
+    // Lists and the card are rebuilt on every update. Put keyboard focus back where it was.
+    const focusKey = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.focus : null;
     updatePositions(Date.now());
     state.sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
     state.aircraft.forEach((p) => { p.see = judge(p); });
@@ -477,6 +483,10 @@
     renderCard();
     renderNext();
     renderAlso();
+    if (focusKey && !document.activeElement.dataset.focus) {
+      const again = document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);
+      if (again) again.focus({ preventScroll: true });
+    }
   }
 
   function renderStatus() {
@@ -779,6 +789,7 @@
     const share = document.createElement('button');
     share.type = 'button';
     share.textContent = 'Share this plane';
+    share.dataset.focus = 'share';
     share.addEventListener('click', () => sharePlane(p, share));
     card.append(dl, share);
   }
@@ -835,6 +846,7 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.dataset.hex = p.hex;
+      b.dataset.focus = `next-${p.hex}`;
       if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
       const when = document.createElement('span');
       when.className = 'when';
@@ -1652,7 +1664,10 @@
 
   // Between updates, move the planes along every second.
   setInterval(() => {
-    if (document.visibilityState === 'visible' && state.view === 'sky' && state.aircraft.length) renderChart();
+    if (document.visibilityState === 'visible' && state.view === 'sky' && state.aircraft.length) {
+      updatePositions(Date.now());
+      renderChart();
+    }
   }, 1000);
 
   let resizeTimer = 0;
