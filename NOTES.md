@@ -1,7 +1,8 @@
 # skyviu notes
 
 Single-page app (`index.html`) plus two Vercel edge proxies (`api/aircraft.mjs` for adsb.lol,
-`api/orbits.mjs` for CelesTrak). No build step, no package.json, no test suite.
+`api/orbits.mjs` for CelesTrak). No build step. `package.json` exists only to pin Playwright and
+run the smoke test (`npm test`); CI runs it on every push and PR.
 
 ## Done
 - 2026-11-07 (autopilot): fixed three live-update bugs in `index.html`.
@@ -23,14 +24,23 @@ Single-page app (`index.html`) plus two Vercel edge proxies (`api/aircraft.mjs` 
   - `test/smoke.mjs`: Playwright with `/api/*` mocked. Run `node test/smoke.mjs` (takes ~20 s, one
     test waits for a 10 s refresh).
 
+- 2026-11-10 (autopilot, run 3, approved in the brief):
+  - `package.json` (one dev dependency, `playwright` 1.63.0 exact, `npm test` script),
+    `package-lock.json`, and `.github/workflows/smoke.yml` (checkout and setup-node pinned to
+    commit SHAs, Node 22, `npm ci`, `playwright install --with-deps chromium`, `npm test`).
+  - `README.md`: what it is, how it works, query params, tests, deploy.
+
 ## Next
-- No README yet.
 - The camera view's labels are only reachable by pointing the phone. The new `#now` list is under
   the camera too, but check it with VoiceOver on a phone.
-- The smoke test isn't in CI. There's no package.json; adding one plus a workflow is Nat's call.
+- CI runs twice on a PR branch (push and pull_request). Cheap, but `push: branches: [main]`
+  would halve it if Nat prefers.
 
 ## Gotchas
-- Run checks with `node test/smoke.mjs`. For a syntax check, pull the `<script>` out of
+- Run checks with `npm test` (same as `node test/smoke.mjs`).
+- In the autopilot container, registry.npmjs.org doesn't resolve, so `npm install` fails. Run 3
+  wrote the lockfile by hand from the hashes in `/opt/node-tools/package-lock.json`; `npm ci
+  --offline` works from the local cache. To bump Playwright, do it on a machine with npm access. For a syntax check, pull the `<script>` out of
   `index.html` into a file and run `node --check` on it (process substitution doesn't work).
 - `render()` rebuilds the head, card, Next and Also lists on every data update (10 s). Anything
   interactive inside them needs a `data-focus` key, or keyboard focus is lost.
