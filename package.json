@@ -1,0 +1,10 @@
+{
+  "name": "skyviu",
+  "private": true,
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
