@@ -59,6 +59,9 @@ jobs:
           npm i -g @openai/codex
           mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
           codex --version
+      - name: Let Codex's sandbox start (Ubuntu 24.04 blocks unprivileged user namespaces, which bwrap needs)
+        if: steps.gate.outputs.skip != '1'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - name: Run Codex
         id: codex
         if: steps.gate.outputs.skip != '1'
