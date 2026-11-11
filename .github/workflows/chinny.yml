@@ -3,7 +3,7 @@
 #
 # Trigger: add label `codex:queued` to an issue, or comment `@chinny` on an issue (owner/collaborators only).
 # Secret:  CODEX_AUTH_JSON = contents of ~/.codex/auth.json after `codex login` (Stanford workspace).
-# Sandbox: Codex runs with --full-auto (workspace-write sandbox, no network, no approval prompts).
+# Sandbox: Codex runs with --sandbox workspace-write (writes only inside the checkout, no network; exec never prompts).
 # Note:    PRs opened with the default GITHUB_TOKEN don't start other workflows, so repo CI won't run on them
 #          until someone pushes to the branch; the Vercel preview still builds.
 name: Chinny (Codex CLI)
@@ -76,7 +76,7 @@ jobs:
           EOF
           cat /tmp/issue.md >> /tmp/prompt.md
           set +e
-          codex exec --full-auto "$(cat /tmp/prompt.md)" 2>&1 | tee /tmp/codex.log
+          codex exec --sandbox workspace-write "$(cat /tmp/prompt.md)" 2>&1 | tee /tmp/codex.log
           echo "rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
       - name: Hand back
         if: steps.gate.outputs.skip != '1' && always()
@@ -90,6 +90,12 @@ jobs:
           fi
           if grep -qiE 'not logged in|unauthorized|401|login' "$log" && [ "${{ steps.codex.outputs.rc }}" != "0" ]; then
             gh issue comment "$N" --body "CODEX-BLOCKED reason=Codex CLI login failed or expired needs=nat ask=Re-run codex login (Stanford workspace) and update the CODEX_AUTH_JSON secret"
+            done_label codex:blocked; exit 0
+          fi
+          rc="${{ steps.codex.outputs.rc }}"
+          if [ -n "$rc" ] && [ "$rc" != "0" ]; then
+            why=$(grep -vE '^\s*$' "$log" | grep -iE 'error|unexpected|failed|denied' | tail -1 | cut -c1-180)
+            gh issue comment "$N" --body "CODEX-BLOCKED reason=Codex CLI exited rc=$rc: ${why:-see the workflow log} needs=claude ask=Fix the Chinny workflow or take this issue"
             done_label codex:blocked; exit 0
           fi
           case "$last_checks" in BLOCKED:*)
