@@ -20,10 +20,11 @@ function airliner(lat, lon, flight, hex, elDeg = 60) {
 }
 const planeNear = (lat, lon, flight, hex) => ({ now: Date.now(), ac: [airliner(lat, lon, flight, hex)] });
 
-async function open(browser, { holdFirstStanford = 0, stanford = planeNear } = {}) {
+async function open(browser, { holdFirstStanford = 0, stanford = planeNear, query = '' } = {}) {
   const page = await browser.newPage();
   const errors = [];
   const calls = [];
+  const requests = [];   // [lat, lon] exactly as the page sent them
   page.on('pageerror', (e) => errors.push(e.message));
   await page.route('**/fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await page.route(`${ORIGIN}/`, (r) => r.fulfill({ contentType: 'text/html', body: html }));
@@ -33,6 +34,7 @@ async function open(browser, { holdFirstStanford = 0, stanford = planeNear } = {
   await page.route('**/api/aircraft**', async (r) => {
     const q = new URL(r.request().url()).searchParams;
     const lat = +q.get('lat'), lon = +q.get('lon');
+    requests.push([q.get('lat'), q.get('lon')]);
     const sjc = Math.abs(lat - 37.36) < 0.01;
     calls.push(sjc ? 'sjc' : 'stanford');
     if (!sjc && stanfordCalls++ === 0 && holdFirstStanford) await new Promise((ok) => setTimeout(ok, holdFirstStanford));
@@ -40,8 +42,8 @@ async function open(browser, { holdFirstStanford = 0, stanford = planeNear } = {
       await r.fulfill({ json: sjc ? planeNear(lat, lon, 'SWA2', 'a00002') : stanford(lat, lon, 'UAL1', 'a00001') });
     } catch { /* the page cancelled this request */ }
   });
-  await page.goto(`${ORIGIN}/`);
-  return { page, errors, calls };
+  await page.goto(`${ORIGIN}/${query}`);
+  return { page, errors, calls, requests };
 }
 
 const tests = {
@@ -81,6 +83,42 @@ const tests = {
     await page.waitForTimeout(10500);   // one refresh
     assert.equal(await page.evaluate(() => document.activeElement.dataset.focus), 'now-a00003');
     assert.match(await page.textContent('#head'), /United Airlines 3/);
+    assert.deepEqual(errors, []);
+  },
+  async 'deep link ?at=KSFO selects SFO and fetches its coordinates'(browser) {
+    const { page, errors, requests } = await open(browser, { query: '?at=KSFO' });
+    await page.waitForFunction(() => /from SFO/.test(document.querySelector('#title').textContent));
+    assert.equal(await page.inputValue('#place'), 'KSFO');
+    // SFO is 37.619806, -122.374821; Stanford is 37.4275, -122.1703.
+    assert.deepEqual(requests[0].map(Number), [37.62, -122.37]);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'deep link ?at= with an unknown place falls back to Stanford'(browser) {
+    const { page, errors, requests } = await open(browser, { query: '?at=nowhere' });
+    await page.waitForFunction(() => /from Stanford/.test(document.querySelector('#title').textContent));
+    assert.equal(await page.inputValue('#place'), 'stanford');
+    assert.deepEqual(requests[0].map(Number), [37.43, -122.17]);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'deep link ?plane= picks that plane'(browser) {
+    const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 70), airliner(lat, lon, 'UAL3', 'a00003', 40)] });
+    const { page, errors } = await open(browser, { stanford: two, query: '?plane=a00003' });
+    await page.waitForSelector('#now button[data-hex="a00003"]');
+    // Without the link UAL1 (higher up) would be picked first.
+    assert.equal(await page.getAttribute('#now button[data-hex="a00003"]', 'aria-current'), 'true');
+    assert.equal(await page.getAttribute('#now button[data-hex="a00001"]', 'aria-current'), null);
+    assert.match(await page.textContent('#head'), /United Airlines 3/);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'deep link ?plane= that is malformed is ignored'(browser) {
+    const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 70), airliner(lat, lon, 'UAL3', 'a00003', 40)] });
+    const { page, errors } = await open(browser, { stanford: two, query: '?plane=zzz' });
+    await page.waitForSelector('#now button[data-hex="a00003"]');
+    assert.match(await page.textContent('#head'), /United Airlines 1/);
+    assert.equal(await page.getAttribute('#now button[data-hex="a00001"]', 'aria-current'), 'true');
     assert.deepEqual(errors, []);
   },
 };
