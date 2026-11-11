@@ -51,17 +51,14 @@ is lost. See the gotchas in `NOTES.md`.
 The page calls `/api/aircraft` and `/api/orbits`, so serve it with something that runs the
 `api/` functions too, such as `vercel dev`. A plain static server shows the page with no data.
 
-## Tests
+## Run the tests
 
-```sh
-npm ci
-npx playwright install chromium   # once
-npm test
-```
+Install dependencies with `npm ci`, then run `npx playwright install chromium` once.
 
-`npm test` runs `test/smoke.mjs`: Playwright with `/api/*` mocked, so it needs no server or
-network. It takes about 20 s. CI runs it on every push and pull request
-(`.github/workflows/smoke.yml`).
+- `npm test` runs the Playwright smoke checks with `/api/*` mocked; no server or live API is needed.
+- `node test/smoke.mjs` runs the same checks directly (the exact command in the `test` script).
+
+The checks take about 20 s. CI runs them on every push and pull request.
 
 ## Deploying
 
