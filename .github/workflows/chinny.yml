@@ -92,7 +92,21 @@ jobs:
         run: |
           log=/tmp/codex.log; touch "$log"
           tokens=$(grep -A1 -iE '^tokens used' "$log" | tail -1 | tr -dc '0-9')
-          [ -n "$tokens" ] && gh issue comment "$N" --body "CODEX-USAGE tokens=$tokens run=${{ github.run_id }} repo=$REPO" || true
+          # Plan limits: Codex writes a session rollout (JSONL) whose token_count events carry rate_limits
+          # (primary = 5-hour window, secondary = weekly), as used_percent. Search recursively so a format shift doesn't break it.
+          ro=$(ls -t ~/.codex/sessions/*/*/*/rollout-*.jsonl 2>/dev/null | head -1)
+          lim=""
+          if [ -n "$ro" ]; then
+            rl=$(jq -c '..|objects|select(has("rate_limits"))|.rate_limits|select(.!=null)' "$ro" 2>/dev/null | tail -1)
+            if [ -n "$rl" ]; then
+              p5=$(echo "$rl" | jq -r '.primary.used_percent // empty'); pw=$(echo "$rl" | jq -r '.secondary.used_percent // empty')
+              m5=$(echo "$rl" | jq -r '.primary.window_minutes // empty'); mw=$(echo "$rl" | jq -r '.secondary.window_minutes // empty')
+              lim="limit_5h_pct=${p5:-?} limit_week_pct=${pw:-?} windows=${m5:-?}m/${mw:-?}m"
+            fi
+            [ -n "$tokens" ] || tokens=$(jq -r '..|objects|.total_tokens? // empty' "$ro" 2>/dev/null | sort -n | tail -1)
+          fi
+          echo "usage: tokens=${tokens:-?} $lim"
+          [ -n "$tokens$lim" ] && gh issue comment "$N" --body "CODEX-USAGE tokens=${tokens:-?} $lim run=${{ github.run_id }} repo=$REPO" || true
           last_checks=$(grep -E '^(CHECKS|BLOCKED):' "$log" | tail -1)
           done_label() { gh issue edit "$N" --add-label "$1" --remove-label codex:working || true; }
           if grep -qiE "^(ERROR|error).*(usage limit|rate.?limit|quota)|you've hit your usage limit|exceeded your (usage|quota)" "$log"; then
