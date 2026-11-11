@@ -59,6 +59,12 @@ jobs:
           npm i -g @openai/codex
           mkdir -p ~/.codex && printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json && chmod 600 ~/.codex/auth.json
           codex --version
+      - name: Install project dependencies (Codex's sandbox has no network)
+        if: steps.gate.outputs.skip != '1'
+        run: |
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund || true; elif [ -f package.json ]; then npm install --no-audit --no-fund || true; fi
+          if [ -f package.json ] && grep -q '"playwright' package.json; then npx playwright install --with-deps chromium || true; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
       - name: Let Codex's sandbox start (Ubuntu 24.04 blocks unprivileged user namespaces, which bwrap needs)
         if: steps.gate.outputs.skip != '1'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
@@ -85,9 +91,11 @@ jobs:
         if: steps.gate.outputs.skip != '1' && always()
         run: |
           log=/tmp/codex.log; touch "$log"
+          tokens=$(grep -A1 -iE '^tokens used' "$log" | tail -1 | tr -dc '0-9')
+          [ -n "$tokens" ] && gh issue comment "$N" --body "CODEX-USAGE tokens=$tokens run=${{ github.run_id }} repo=$REPO" || true
           last_checks=$(grep -E '^(CHECKS|BLOCKED):' "$log" | tail -1)
           done_label() { gh issue edit "$N" --add-label "$1" --remove-label codex:working || true; }
-          if grep -qiE 'usage limit|rate limit|quota' "$log"; then
+          if grep -qiE "^(ERROR|error).*(usage limit|rate.?limit|quota)|you've hit your usage limit|exceeded your (usage|quota)" "$log"; then
             gh issue comment "$N" --body "CODEX-PAUSED until=$(TZ=America/Los_Angeles date -d '+5 hours' -Iminutes) (Codex CLI hit a usage limit)"
             gh issue edit "$N" --add-label codex:queued --remove-label codex:working || true; exit 0
           fi
