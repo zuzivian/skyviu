@@ -54,6 +54,23 @@ const tests = {
     assert.deepEqual(errors, []);
   },
 
+  async 'ground and stale planes never count as visible'(browser) {
+    const mixed = (lat, lon) => ({ now: Date.now(), ac: [
+      airliner(lat, lon, 'UAL1', 'a00001'),
+      { ...airliner(lat, lon, 'UAL2', 'a00002'), alt_baro: 'ground' },
+      { ...airliner(lat, lon, 'UAL3', 'a00003'), alt_baro: 300, gs: 20 },
+      { ...airliner(lat, lon, 'UAL4', 'a00004'), seen_pos: 120 },
+    ] });
+    const { page, errors } = await open(browser, { stanford: mixed });
+    await page.waitForSelector('#now button[data-hex="a00001"]');
+    assert.equal(await page.textContent('#title'), '1 plane you can see from Stanford');
+    assert.equal(await page.locator('#now button').count(), 1);
+    assert.equal(await page.getAttribute('#now button', 'data-hex'), 'a00001');
+    // Stale aircraft still count as airborne; both kinds of ground aircraft do not.
+    assert.equal(await page.textContent('#status'), 'Live · 1 of 2 planes within 29 miles');
+    assert.deepEqual(errors, []);
+  },
+
   async 'Show all in range toggles low aircraft on the sky chart'(browser) {
     const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 60), airliner(lat, lon, 'UAL3', 'a00003', 5)] });
     const { page, errors } = await open(browser, { stanford: two });
