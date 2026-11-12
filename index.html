@@ -399,7 +399,6 @@
       const seen = new Set(withPos.map((a) => a.hex));
       for (const hex of state.trails.keys()) if (!seen.has(hex)) state.trails.delete(hex);
       state.aircraft = withPos.map((a) => enrich(a, j.now || fetchedAt, fetchedAt));
-      state.noPosition = (j.ac || []).length - withPos.length;
       state.updatedAt = new Date(fetchedAt);
       state.error = '';
     } catch (e) {
@@ -518,7 +517,7 @@
     }
     el.className = 'status';
     if (!state.updatedAt) { setText(el, 'Finding planes.'); return; }
-    setText(el, `Live · ${n} of ${air} planes within 29 miles` +
+    setText(el, `Live · ${n} of ${air} planes within ${Math.round(NM * 1852 / M_PER_MI)} miles` +
       (state.notice ? `. ${state.notice}` : ''));
   }
 
