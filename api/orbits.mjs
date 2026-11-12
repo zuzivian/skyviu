@@ -20,7 +20,9 @@ export default {
     if (upstream.status !== 200) return fail(`CelesTrak returned ${upstream.status}`);
     const all = await upstream.json().catch(() => null);
     if (!Array.isArray(all)) return fail('CelesTrak sent something unexpected');
-    return Response.json({ objects: all.filter((o) => KEEP.has(o.NORAD_CAT_ID)) }, {
+    const objects = all.filter((o) => KEEP.has(o.NORAD_CAT_ID));
+    if (!objects.length) return fail('CelesTrak listed neither station');
+    return Response.json({ objects }, {
       headers: { 'Cache-Control': 'public, s-maxage=7200' },
     });
   },
