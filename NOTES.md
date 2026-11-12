@@ -2,7 +2,7 @@
 
 Single-page app (`index.html`) plus two Vercel edge proxies (`api/aircraft.mjs` for adsb.lol,
 `api/orbits.mjs` for CelesTrak). No build step. `package.json` exists only to pin Playwright and
-run the smoke test (`npm test`); CI runs it on every push and PR.
+run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
 
 ## Done
 - 2026-11-07 (autopilot): fixed three live-update bugs in `index.html`.
@@ -30,6 +30,33 @@ run the smoke test (`npm test`); CI runs it on every push and PR.
     commit SHAs, Node 22, `npm ci`, `playwright install --with-deps chromium`, `npm test`).
   - `README.md`: what it is, how it works, query params, tests, deploy.
 
+- 2026-11-10 (since run 3):
+  - Added agent rules and the fleet handoff protocol (#2, #6).
+  - Added smoke tests for `?at=` and `?plane=` deep links (#7).
+  - Added unit tests for both edge proxies with fetch stubbed and no network (#8).
+  - Added the README map of `index.html` and its update cycle (#9).
+
+- 2026-11-11:
+  - Added the Chinny runner: Codex CLI on GitHub Actions (#10).
+  - Updated the runner's sandbox option and CLI error reporting (#12).
+  - Enabled the runner's sandbox to start with unprivileged user namespaces (#13).
+  - Installed dependencies before running Chinny and tightened usage-limit detection and reporting (#14).
+  - Added the README's "Run the tests" section (#15).
+  - Added usage reporting and a periodic usage probe (#16).
+  - Made the usage probe hourly and added weekly reset timing (#26).
+
+- 2026-11-12:
+  - Made `?at=` place links case-insensitive (#24).
+  - Added smoke tests for the "Show all in range" toggle (#25).
+  - Stopped the status live region from rewriting identical text every 10 s (#27).
+  - Added smoke tests that ground and stale planes never count as visible (#28).
+  - Derived the status line's range from `NM` and removed unused `noPosition` counting (#29).
+  - Cleared the old error on place changes and added smoke tests for error recovery (#38).
+  - Made `npm test` run proxy unit tests before the smoke suite (#39).
+  - Made the aircraft proxy reject blank coordinates and malformed upstream answers (#40).
+  - Added browser-free unit tests for sky geometry, visibility and sun position helpers (#41).
+  - Showed an error when an aircraft response has no aircraft list (#42).
+
 ## Next
 - The camera view's labels are only reachable by pointing the phone. The new `#now` list is under
   the camera too, but check it with VoiceOver on a phone.
@@ -37,10 +64,13 @@ run the smoke test (`npm test`); CI runs it on every push and PR.
   would halve it if Nat prefers.
 
 ## Gotchas
-- Run checks with `npm test` (same as `node test/smoke.mjs`).
-- In the autopilot container, registry.npmjs.org doesn't resolve, so `npm install` fails. Run 3
-  wrote the lockfile by hand from the hashes in `/opt/node-tools/package-lock.json`; `npm ci
-  --offline` works from the local cache. To bump Playwright, do it on a machine with npm access. For a syntax check, pull the `<script>` out of
+- Install dependencies with `npm ci`, then run `npx playwright install chromium` once.
+- `npm test` runs `node test/api.mjs` followed by `node test/smoke.mjs`. The proxy tests stub
+  fetch; the Playwright smoke tests mock `/api/*`. Neither suite needs live API access.
+- Run `node test/astro.mjs` separately for the geometry, visibility and sun position tests;
+  it is not included in `npm test`.
+- Run 3's autopilot container could not resolve registry.npmjs.org; `npm ci --offline` worked
+  from its local cache. That cache workaround depends on the environment. For a syntax check, pull the `<script>` out of
   `index.html` into a file and run `node --check` on it (process substitution doesn't work).
 - `render()` rebuilds the head, card, Next and Also lists on every data update (10 s). Anything
   interactive inside them needs a `data-focus` key, or keyboard focus is lost.
