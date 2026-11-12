@@ -393,6 +393,7 @@
       const j = await r.json().catch(() => ({}));
       if (req !== inflight) return;
       if (!r.ok) throw new Error(j.error || `status ${r.status}`);
+      if (!Array.isArray(j.ac)) throw new Error('unexpected answer');
       const fetchedAt = Date.now();
       const withPos = (j.ac || []).filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number');
       withPos.forEach((a) => rememberTrail(a, j.now || fetchedAt));
