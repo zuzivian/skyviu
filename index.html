@@ -513,13 +513,13 @@
     all.textContent = state.showAll ? `Show only the ${n} you can see` : `Show all ${air} in range`;
     if (state.error) {
       el.className = 'status error';
-      el.textContent = `No answer from the data source (${state.error}). Trying again.`;
+      setText(el, `No answer from the data source (${state.error}). Trying again.`);
       return;
     }
     el.className = 'status';
-    if (!state.updatedAt) { el.textContent = 'Finding planes.'; return; }
-    el.textContent = `Live · ${n} of ${air} planes within 29 miles` +
-      (state.notice ? `. ${state.notice}` : '');
+    if (!state.updatedAt) { setText(el, 'Finding planes.'); return; }
+    setText(el, `Live · ${n} of ${air} planes within 29 miles` +
+      (state.notice ? `. ${state.notice}` : ''));
   }
 
   function size() {
@@ -1653,13 +1653,13 @@
     state.wanted = null;
     if (placeSel.value !== 'me') { setObserver(PLACES.find((p) => p.id === placeSel.value)); return; }
     const back = () => { placeSel.value = state.obs.id; };
-    if (!navigator.geolocation) { back(); $('status').textContent = 'This browser can\'t share a location.'; return; }
-    $('status').textContent = 'Finding you. Rounded to about 1 km before it leaves your phone.';
+    if (!navigator.geolocation) { back(); setText($('status'), 'This browser can\'t share a location.'); return; }
+    setText($('status'), 'Finding you. Rounded to about 1 km before it leaves your phone.');
     navigator.geolocation.getCurrentPosition((pos) => {
       setObserver({ id: 'me', label: 'My location', title: 'where you are', lat: pos.coords.latitude, lon: pos.coords.longitude });
     }, (err) => {
       back();
-      $('status').textContent = `Couldn't get your location (${err.message}).`;
+      setText($('status'), `Couldn't get your location (${err.message}).`);
     }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
   });
   function setObserver(obs) {
