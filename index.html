@@ -1370,7 +1370,7 @@
       ar.listening = false;
     }
     ar.axes = null; ar.absolute = false; ar.offset = null;
-    if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
   }
 
   function saveAlign() {
@@ -1697,7 +1697,16 @@
 
   let wakeLock = null;
   async function keepAwake() {
-    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch { wakeLock = null; }
+    try {
+      if ('wakeLock' in navigator) {
+        const lock = await navigator.wakeLock.request('screen');
+        if (state.view !== 'camera' || document.visibilityState !== 'visible') {
+          await lock.release();
+          return;
+        }
+        wakeLock = lock;
+      }
+    } catch { wakeLock = null; }
   }
   document.addEventListener('visibilitychange', () => {
     const shown = document.visibilityState === 'visible';
