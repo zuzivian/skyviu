@@ -1,9 +1,9 @@
 # Chinny usage probe: a tiny Codex CLI call that reads the Stanford ChatGPT plan's limits (5-hour and weekly
 # used %) from the session rollout and posts CODEX-USAGE on the Chinny tracking issue, so HQ can draw Chinny's ring
-# even when no coding run happened recently. Costs a few hundred tokens per probe.
+# even when no coding run happened recently. Costs a few hundred tokens per probe. Hourly, so the supervisor can pace Chinny through the week.
 name: Chinny usage probe
 on:
-  schedule: [{ cron: "17 */6 * * *" }]
+  schedule: [{ cron: "17 * * * *" }]
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,5 +33,7 @@ jobs:
           [ -n "$rl" ] || { echo "no rate_limits in rollout"; exit 0; }
           p5=$(echo "$rl" | jq -r '.primary.used_percent // "?"'); pw=$(echo "$rl" | jq -r '.secondary.used_percent // "?"')
           m5=$(echo "$rl" | jq -r '.primary.window_minutes // "?"'); mw=$(echo "$rl" | jq -r '.secondary.window_minutes // "?"')
+          rw=$(echo "$rl" | jq -r '.secondary.resets_at // empty'); [ -n "$rw" ] || { rs=$(echo "$rl" | jq -r '.secondary.resets_in_seconds // empty'); [ -n "$rs" ] && rw=$(date -u -d "+${rs} seconds" +%Y-%m-%dT%H:%M:%SZ); }
+          case "$rw" in ''|*[!0-9]*) ;; *) rw=$(date -u -d "@$rw" +%Y-%m-%dT%H:%M:%SZ);; esac
           echo "limits: 5h=$p5% week=$pw% ($m5m/$mw m)"
-          gh issue comment "$TRACK" -R "$GITHUB_REPOSITORY" --body "CODEX-USAGE probe=1 tokens=0 limit_5h_pct=$p5 limit_week_pct=$pw windows=${m5}m/${mw}m run=${{ github.run_id }} repo=$GITHUB_REPOSITORY"
+          gh issue comment "$TRACK" -R "$GITHUB_REPOSITORY" --body "CODEX-USAGE probe=1 tokens=0 limit_5h_pct=$p5 limit_week_pct=$pw windows=${m5}m/${mw}m week_reset=${rw:-?} run=${{ github.run_id }} repo=$GITHUB_REPOSITORY"
