@@ -1719,7 +1719,7 @@
   const params = new URLSearchParams(location.search);
   const linkedPlane = (params.get('plane') || '').toLowerCase();
   if (/^~?[0-9a-f]{6}$/.test(linkedPlane)) state.wanted = linkedPlane;
-  const linkedPlace = PLACES.find((p) => p.id === params.get('at'));
+  const linkedPlace = PLACES.find((p) => p.id.toLowerCase() === (params.get('at') || '').toLowerCase());
   if (linkedPlace) placeSel.value = linkedPlace.id;
   setObserver(linkedPlace || PLACES[0]);
   loadOrbits();
