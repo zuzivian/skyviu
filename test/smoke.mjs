@@ -93,7 +93,7 @@ const tests = {
 
   async 'the planes you can see are buttons, and focus survives a refresh'(browser) {
     const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 70), airliner(lat, lon, 'UAL3', 'a00003', 40)] });
-    const { page, errors } = await open(browser, { stanford: two });
+    const { page, errors, calls } = await open(browser, { stanford: two });
     await page.waitForSelector('#now button[data-hex="a00003"]');
     assert.equal(await page.locator('#now button').count(), 2);
     // The easiest to spot is picked first.
@@ -103,7 +103,21 @@ const tests = {
     assert.match(await page.textContent('#head'), /United Airlines 3/);
     assert.equal(await page.getAttribute('#now button[data-hex="a00003"]', 'aria-current'), 'true');
     assert.equal(await page.getAttribute('#now button[data-hex="a00001"]', 'aria-current'), null);
+    const statusText = await page.textContent('#status');
+    await page.evaluate(() => {
+      window.statusMutations = 0;
+      window.statusObserver = new MutationObserver((records) => { window.statusMutations += records.length; });
+      window.statusObserver.observe(document.querySelector('#status'), { childList: true, characterData: true, subtree: true });
+    });
+    const callsBeforeRefresh = calls.length;
     await page.waitForTimeout(10500);   // one refresh
+    assert.ok(calls.length > callsBeforeRefresh, 'the scheduled refresh must fetch aircraft');
+    assert.equal(await page.textContent('#status'), statusText);
+    assert.equal(await page.evaluate(() => {
+      window.statusMutations += window.statusObserver.takeRecords().length;
+      window.statusObserver.disconnect();
+      return window.statusMutations;
+    }), 0, 'unchanged status text must not mutate during a refresh');
     assert.equal(await page.evaluate(() => document.activeElement.dataset.focus), 'now-a00003');
     assert.match(await page.textContent('#head'), /United Airlines 3/);
     assert.deepEqual(errors, []);
