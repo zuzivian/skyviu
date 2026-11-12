@@ -96,6 +96,28 @@ const tests = {
     });
   },
 
+  async 'orbits: neither station gives {error, objects: []}, caches 15 min'() {
+    for (const all of [[], [{ NORAD_CAT_ID: 12345 }, { NORAD_CAT_ID: 99999 }]]) {
+      await withUpstream(Response.json(all), async () => {
+        const res = await orbits.fetch();
+        assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=900');
+        assert.deepEqual(await res.json(), { error: 'CelesTrak listed neither station', objects: [] });
+      });
+    }
+  },
+
+  async 'orbits: a single station keeps the normal answer and 2 h cache'() {
+    for (const id of [25544, 48274]) {
+      const objects = [{ NORAD_CAT_ID: id, OBJECT_NAME: `obj${id}` }];
+      await withUpstream(Response.json(objects), async () => {
+        const res = await orbits.fetch();
+        assert.equal(res.status, 200);
+        assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=7200');
+        assert.deepEqual(await res.json(), { objects });
+      });
+    }
+  },
+
   async 'orbits: upstream throws, non-200 or non-array gives {error, objects: []}, caches 15 min'() {
     for (const reply of [boom, new Response('busy', { status: 403 }), Response.json({ not: 'an array' }), new Response('not json')]) {
       await withUpstream(reply, async () => {
