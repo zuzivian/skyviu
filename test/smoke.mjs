@@ -54,6 +54,29 @@ const tests = {
     assert.deepEqual(errors, []);
   },
 
+  async 'Show all in range toggles low aircraft on the sky chart'(browser) {
+    const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 60), airliner(lat, lon, 'UAL3', 'a00003', 5)] });
+    const { page, errors } = await open(browser, { stanford: two });
+    await page.waitForSelector('#sky [data-hex="a00001"]');
+    assert.equal(await page.getAttribute('#showall', 'aria-pressed'), 'false');
+    assert.equal(await page.textContent('#showall'), 'Show all 2 in range');
+    assert.equal(await page.locator('#sky [data-hex="a00001"]').count(), 1);
+    assert.equal(await page.locator('#sky [data-hex="a00003"]').count(), 0);
+
+    await page.click('#showall');
+    assert.equal(await page.getAttribute('#showall', 'aria-pressed'), 'true');
+    assert.equal(await page.textContent('#showall'), 'Show only the 1 you can see');
+    assert.equal(await page.locator('#sky [data-hex="a00001"]').count(), 1);
+    assert.equal(await page.locator('#sky [data-hex="a00003"]').count(), 1);
+
+    await page.click('#showall');
+    assert.equal(await page.getAttribute('#showall', 'aria-pressed'), 'false');
+    assert.equal(await page.textContent('#showall'), 'Show all 2 in range');
+    assert.equal(await page.locator('#sky [data-hex="a00001"]').count(), 1);
+    assert.equal(await page.locator('#sky [data-hex="a00003"]').count(), 0);
+    assert.deepEqual(errors, []);
+  },
+
   async 'switching place mid-request asks for the new place at once'(browser) {
     const { page, errors, calls } = await open(browser, { holdFirstStanford: 4000 });
     await page.waitForTimeout(200);
