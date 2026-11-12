@@ -55,8 +55,9 @@ The page calls `/api/aircraft` and `/api/orbits`, so serve it with something tha
 
 Install dependencies with `npm ci`, then run `npx playwright install chromium` once.
 
-- `npm test` runs the Playwright smoke checks with `/api/*` mocked; no server or live API is needed.
-- `node test/smoke.mjs` runs the same checks directly (the exact command in the `test` script).
+- `npm test` runs the proxy unit tests first, then the Playwright smoke checks; no server or live API is needed.
+- `node test/api.mjs` runs the proxy unit tests directly with fetch stubbed and no network.
+- `node test/smoke.mjs` runs the Playwright smoke checks directly with `/api/*` mocked.
 
 The checks take about 20 s. CI runs them on every push and pull request.
 

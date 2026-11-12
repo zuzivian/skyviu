@@ -1,5 +1,5 @@
 // Unit tests for the two Vercel edge proxies in api/. No network: fetch is stubbed.
-// Run: node test/api.mjs   (not wired into `npm test` or CI)
+// Run: node test/api.mjs (also runs first in `npm test` and CI).
 import assert from 'node:assert/strict';
 import aircraft from '../api/aircraft.mjs';
 import orbits from '../api/orbits.mjs';
