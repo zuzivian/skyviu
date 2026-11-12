@@ -94,6 +94,24 @@ const tests = {
     assert.deepEqual(errors, []);
   },
 
+  async 'deep link ?at=ksfo selects SFO and canonicalizes the address'(browser) {
+    const { page, errors, requests } = await open(browser, { query: '?at=ksfo' });
+    await page.waitForFunction(() => /from SFO/.test(document.querySelector('#title').textContent));
+    assert.equal(await page.inputValue('#place'), 'KSFO');
+    assert.deepEqual(requests[0].map(Number), [37.62, -122.37]);
+    assert.equal(new URL(page.url()).searchParams.get('at'), 'KSFO');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'deep link ?at=ME cannot select My location'(browser) {
+    const { page, errors, requests } = await open(browser, { query: '?at=ME' });
+    await page.waitForFunction(() => /from Stanford/.test(document.querySelector('#title').textContent));
+    assert.equal(await page.inputValue('#place'), 'stanford');
+    assert.deepEqual(requests[0].map(Number), [37.43, -122.17]);
+    assert.equal(new URL(page.url()).searchParams.has('at'), false);
+    assert.deepEqual(errors, []);
+  },
+
   async 'deep link ?at= with an unknown place falls back to Stanford'(browser) {
     const { page, errors, requests } = await open(browser, { query: '?at=nowhere' });
     await page.waitForFunction(() => /from Stanford/.test(document.querySelector('#title').textContent));
