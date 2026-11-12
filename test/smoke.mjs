@@ -20,8 +20,9 @@ function airliner(lat, lon, flight, hex, elDeg = 60) {
 }
 const planeNear = (lat, lon, flight, hex) => ({ now: Date.now(), ac: [airliner(lat, lon, flight, hex)] });
 
-async function open(browser, { holdFirstStanford = 0, stanford = planeNear, query = '' } = {}) {
+async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '' } = {}) {
   const page = await browser.newPage();
+  if (clock) await page.clock.install();
   const errors = [];
   const calls = [];
   const requests = [];   // [lat, lon] exactly as the page sent them
@@ -38,8 +39,13 @@ async function open(browser, { holdFirstStanford = 0, stanford = planeNear, quer
     const sjc = Math.abs(lat - 37.36) < 0.01;
     calls.push(sjc ? 'sjc' : 'stanford');
     if (!sjc && stanfordCalls++ === 0 && holdFirstStanford) await new Promise((ok) => setTimeout(ok, holdFirstStanford));
+    if (sjc && holdSjc) await new Promise((ok) => setTimeout(ok, holdSjc));
     try {
-      await r.fulfill({ json: sjc ? planeNear(lat, lon, 'SWA2', 'a00002') : stanford(lat, lon, 'UAL1', 'a00001') });
+      if (!sjc && failStanford()) {
+        await r.fulfill({ status: 502, json: { error: 'adsb.lol returned 503' } });
+      } else {
+        await r.fulfill({ json: sjc ? planeNear(lat, lon, 'SWA2', 'a00002') : stanford(lat, lon, 'UAL1', 'a00001') });
+      }
     } catch { /* the page cancelled this request */ }
   });
   await page.goto(`${ORIGIN}/${query}`);
@@ -47,6 +53,42 @@ async function open(browser, { holdFirstStanford = 0, stanford = planeNear, quer
 }
 
 const tests = {
+  async 'aircraft errors show the data source failure without page errors'(browser) {
+    const { page, errors } = await open(browser, { failStanford: () => true });
+    await page.waitForSelector('#status.error');
+    assert.match(await page.textContent('#status'), /No answer from the data source \(adsb.lol returned 503\)/);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'a scheduled refresh recovers from an aircraft error'(browser) {
+    let failing = true;
+    const { page, errors, calls } = await open(browser, { failStanford: () => failing, clock: true });
+    await page.waitForSelector('#status.error');
+    failing = false;
+    const callsBeforeRefresh = calls.length;
+    await page.clock.fastForward(10500);
+    await page.waitForSelector('#now button[data-hex="a00001"]');
+    assert.ok(calls.length > callsBeforeRefresh, 'the scheduled refresh must retry aircraft');
+    assert.match(await page.textContent('#status'), /^Live ·/);
+    assert.equal(await page.locator('#status.error').count(), 0);
+    assert.match(await page.textContent('#head'), /United Airlines 1/);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'switching place clears the old error while the new answer is pending'(browser) {
+    const { page, errors, calls } = await open(browser, { failStanford: () => true, holdSjc: 2000 });
+    await page.waitForSelector('#status.error');
+    await page.selectOption('#place', 'KSJC');
+    assert.equal(await page.textContent('#status'), 'Finding planes.');
+    assert.equal(await page.locator('#status.error').count(), 0);
+    await page.waitForTimeout(1000);
+    assert.equal(await page.textContent('#status'), 'Finding planes.');
+    await page.waitForSelector('#now button[data-hex="a00002"]');
+    assert.deepEqual(calls.slice(0, 2), ['stanford', 'sjc']);
+    assert.match(await page.textContent('#status'), /^Live ·/);
+    assert.deepEqual(errors, []);
+  },
+
   async 'shows the visible plane'(browser) {
     const { page, errors } = await open(browser);
     await page.waitForFunction(() => /1 plane you can see from Stanford/.test(document.querySelector('#title').textContent));
