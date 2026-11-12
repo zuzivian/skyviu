@@ -20,8 +20,9 @@ function airliner(lat, lon, flight, hex, elDeg = 60) {
 }
 const planeNear = (lat, lon, flight, hex) => ({ now: Date.now(), ac: [airliner(lat, lon, flight, hex)] });
 
-async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '' } = {}) {
+async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '', initScript } = {}) {
   const page = await browser.newPage();
+  if (initScript) await page.addInitScript(initScript);
   if (clock) await page.clock.install();
   const errors = [];
   const calls = [];
@@ -214,6 +215,38 @@ const tests = {
     assert.equal(await page.inputValue('#place'), 'stanford');
     assert.deepEqual(requests[0].map(Number), [37.43, -122.17]);
     assert.deepEqual(errors, []);
+  },
+
+  async 'Share this plane copies the place and plane, omitting the default place'(browser) {
+    for (const [query, hex, search] of [
+      ['?at=KSJC', 'a00002', '?at=KSJC&plane=a00002'],
+      ['', 'a00001', '?plane=a00001'],
+    ]) {
+      const { page, errors } = await open(browser, {
+        query,
+        initScript: () => {
+          Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+          Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: async (text) => { window.copiedText = text; } },
+            configurable: true,
+          });
+        },
+      });
+      await page.waitForSelector(`#now button[data-hex="${hex}"]`);
+      await page.getByText('Flight details', { exact: true }).click();
+      const share = page.locator('#card button[data-focus="share"]');
+      assert.equal(await share.textContent(), 'Share this plane');
+      await share.click();
+      await page.waitForFunction(() => document.querySelector('#card button[data-focus="share"]').textContent === 'Link copied');
+      const url = new URL(await page.evaluate(() => window.copiedText));
+      assert.equal(url.origin, ORIGIN);
+      assert.equal(url.pathname, '/');
+      assert.equal(url.search, search);
+      if (!query) assert.equal(url.searchParams.has('at'), false);
+      assert.equal(await share.textContent(), 'Link copied');
+      assert.deepEqual(errors, []);
+      await page.close();
+    }
   },
 
   async 'deep link ?plane= picks that plane'(browser) {
