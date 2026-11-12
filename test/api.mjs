@@ -43,6 +43,38 @@ const tests = {
     }
   },
 
+  async 'aircraft: blank coordinates are 400 without an upstream call'() {
+    for (const qs of ['?lat=%20&lon=-122.1', '?lat=37.4&lon=%20', '?lat=&lon=', '?lat=%20&lon=%20']) {
+      await withUpstream(new Response('{"ac":[]}'), async (urls) => {
+        const res = await aircraft.fetch(get(qs));
+        assert.equal(res.status, 400, qs);
+        assert.equal(typeof (await res.json()).error, 'string', qs);
+        assert.equal(urls.length, 0, `${qs} must not reach upstream`);
+      });
+    }
+  },
+
+  async 'aircraft: malformed JSON or invalid aircraft data is 502'() {
+    for (const body of ['<html>oops</html>', '{"now":1}', 'null', '[]', '42', '{"ac":{}}', '{"ac":null}']) {
+      await withUpstream(new Response(body), async () => {
+        const res = await aircraft.fetch(get('?lat=37.4&lon=-122.1'));
+        assert.equal(res.status, 502, body);
+        assert.deepEqual(await res.json(), { error: 'adsb.lol sent something unexpected' }, body);
+      });
+    }
+  },
+
+  async 'aircraft: valid aircraft JSON keeps its original formatting and cache headers'() {
+    const body = ' { "now": 1, "ac": [] }\n';
+    await withUpstream(new Response(body), async () => {
+      const res = await aircraft.fetch(get('?lat=37.4&lon=-122.1'));
+      assert.equal(res.status, 200);
+      assert.equal(await res.text(), body);
+      assert.equal(res.headers.get('Content-Type'), 'application/json');
+      assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=10');
+    });
+  },
+
   async 'aircraft: upstream throws or non-2xx is 502 with {error}'() {
     for (const reply of [boom, new Response('nope', { status: 500 }), new Response('nope', { status: 404 })]) {
       await withUpstream(reply, async () => {
