@@ -464,9 +464,9 @@ focus-preservation pattern and all the remaining tests.
 
 The work ships as six issues, in this order. Each leaves `npm test` green.
 
-1. Foundation: tokens, fonts, theme switch, page shell.
-2. Cuts: camera view, QR, show-all, Also list, stations and `api/orbits.mjs`.
-3. Core view: the horizon panorama replaces the polar chart.
-4. Answer, timeline and plane detail.
-5. States: loading, empty, error, stale, no-JS.
-6. Polish: motion, accessibility pass, performance budget.
+1. #49 Foundation: tokens, fonts, theme switch, page shell.
+2. #50 Cuts: camera view, QR, show-all, Also list, stations and `api/orbits.mjs`.
+3. #51 Core view: the horizon panorama replaces the polar chart.
+4. #52 Answer, timeline and plane detail.
+5. #53 States: loading, empty, error, stale, no-JS.
+6. #54 Polish: motion, accessibility pass, performance budget.
