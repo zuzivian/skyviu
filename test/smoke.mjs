@@ -264,6 +264,101 @@ const tests = {
     assert.equal(await page.getAttribute('#now button[data-hex="a00001"]', 'aria-current'), 'true');
     assert.deepEqual(errors, []);
   },
+
+  // States (docs/redesign-2026-11.md §5.5).
+  async 'loading shows the horizon before data arrives'(browser) {
+    const { page, errors } = await open(browser, { holdFirstStanford: 3000 });
+    await page.waitForFunction(() => document.querySelector('#head .answer')?.textContent === 'Listening for planes…', null, { timeout: 1000 });
+    await page.waitForFunction(() => [...document.querySelectorAll('#sky text')].some((t) => t.textContent === 'N'), null, { timeout: 1000 });
+    assert.equal(await page.textContent('#status'), 'Connecting to adsb.lol');
+    assert.equal(await page.locator('#head .sub').count(), 0);
+    assert.equal(await page.textContent('#now'), 'Waiting for the first update.');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'quiet sky when nothing is in range'(browser) {
+    const { page, errors } = await open(browser, { stanford: () => ({ now: Date.now(), ac: [] }) });
+    await page.waitForFunction(() => /^Live/.test(document.querySelector('#status').textContent));
+    assert.equal(await page.textContent('#head .answer'), 'No planes in range right now.');
+    assert.equal(await page.locator('#head .sub').count(), 0);
+    assert.equal(await page.isHidden('#more'), true);
+    assert.equal(await page.textContent('#next'), 'Nothing on course to come into view in the next 10 minutes.');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'quiet sky counts the planes in range that are too low'(browser) {
+    const low = (lat, lon) => ({ now: Date.now(), ac: [{ ...airliner(lat, lon, 'UAL1', 'a00001', 3), gs: 0, track: 0 }] });
+    const { page, errors } = await open(browser, { stanford: low });
+    await page.waitForFunction(() => /^Live/.test(document.querySelector('#status').textContent));
+    assert.equal(await page.textContent('#head .answer'), 'Quiet sky. 1 plane in range, none high or close enough to see.');
+    assert.equal(await page.isHidden('#more'), true);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'nothing visible but one coming'(browser) {
+    const coming = (lat, lon) => ({ now: Date.now(), ac: [{ ...airliner(lat, lon, 'UAL9', 'a00009', 5), track: 180, gs: 450 }] });
+    const { page, errors } = await open(browser, { stanford: coming });
+    await page.waitForSelector('#next button[data-hex="a00009"]');
+    assert.match(await page.textContent('#head .answer'), /^Nothing to see this second\. Next: United Airlines 9 in \d+ min/);
+    assert.equal(await page.getAttribute('#next button[data-hex="a00009"]', 'aria-current'), 'true');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'an error keeps the last planes'(browser) {
+    let failing = false;
+    const { page, errors } = await open(browser, { failStanford: () => failing, clock: true });
+    await page.waitForSelector('#now button[data-hex="a00001"]');
+    assert.equal(await page.locator('#status.live').count(), 1);
+    failing = true;
+    await page.clock.fastForward(10500);
+    await page.waitForSelector('#status.error');
+    assert.equal(await page.textContent('#status'), 'No answer from the data source (adsb.lol returned 503). Retrying every 10 s.');
+    assert.equal(await page.locator('#status.live').count(), 0);
+    assert.equal(await page.locator('#now button[data-hex="a00001"]').count(), 1);
+    assert.match(await page.textContent('#head .answer'), /^Look north/);
+    assert.equal(await page.locator('.pano.stale').count(), 0);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'planes fade after 30 s without fresh data'(browser) {
+    let failing = false;
+    const { page, errors } = await open(browser, { failStanford: () => failing, clock: true });
+    await page.waitForSelector('#now button[data-hex="a00001"]');
+    failing = true;
+    await page.clock.fastForward(10500);
+    await page.waitForSelector('#status.error');
+    await page.clock.fastForward(21000);
+    await page.waitForSelector('.pano.stale');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#sky .planes')).opacity), '0.5');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#sky > g')).opacity), '1');
+    failing = false;
+    await page.clock.fastForward(10500);
+    await page.waitForSelector('#status.live');
+    assert.equal(await page.locator('.pano.stale').count(), 0);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'an error before any data says so and draws the grid only'(browser) {
+    const { page, errors } = await open(browser, { failStanford: () => true });
+    await page.waitForSelector('#status.error');
+    assert.equal(await page.textContent('#head .answer'), 'Can\'t reach the plane data right now.');
+    assert.equal(await page.locator('#sky text', { hasText: /^N$/ }).count(), 0);
+    assert.ok(await page.locator('#sky line').count() > 0, 'the grid is drawn');
+    assert.equal(await page.locator('#now li, #next li').count(), 0);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'without JavaScript the page says it needs it'(browser) {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.route('**/fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+    await page.route(`${ORIGIN}/`, (r) => r.fulfill({ contentType: 'text/html', body: html }));
+    await page.goto(`${ORIGIN}/`);
+    assert.equal(await page.textContent('#head .answer'), 'skyviu needs JavaScript to fetch live plane positions.');
+    assert.equal(await page.isVisible('#head .answer'), true);
+    for (const sel of ['#status', '.pano', '.timeline']) assert.equal(await page.isHidden(sel), true, `${sel} is hidden`);
+    await context.close();
+  },
 };
 
 const browser = await chromium.launch();
