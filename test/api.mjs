@@ -1,8 +1,7 @@
-// Unit tests for the two Vercel edge proxies in api/. No network: fetch is stubbed.
+// Unit tests for the Vercel edge proxy in api/. No network: fetch is stubbed.
 // Run: node test/api.mjs (also runs first in `npm test` and CI).
 import assert from 'node:assert/strict';
 import aircraft from '../api/aircraft.mjs';
-import orbits from '../api/orbits.mjs';
 
 const realFetch = globalThis.fetch;
 const get = (qs) => new Request(`http://skyviu.test/api/aircraft${qs}`);
@@ -81,51 +80,6 @@ const tests = {
         const res = await aircraft.fetch(get('?lat=37.4&lon=-122.1'));
         assert.equal(res.status, 502);
         assert.equal(typeof (await res.json()).error, 'string');
-      });
-    }
-  },
-
-  async 'orbits: keeps only NORAD 25544 and 48274, caches 2 h'() {
-    const all = [25544, 12345, 48274, 99999].map((id) => ({ NORAD_CAT_ID: id, OBJECT_NAME: `obj${id}` }));
-    await withUpstream(Response.json(all), async () => {
-      const res = await orbits.fetch();
-      assert.equal(res.status, 200);
-      assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=7200');
-      const { objects } = await res.json();
-      assert.deepEqual(objects.map((o) => o.NORAD_CAT_ID), [25544, 48274]);
-    });
-  },
-
-  async 'orbits: neither station gives {error, objects: []}, caches 15 min'() {
-    for (const all of [[], [{ NORAD_CAT_ID: 12345 }, { NORAD_CAT_ID: 99999 }]]) {
-      await withUpstream(Response.json(all), async () => {
-        const res = await orbits.fetch();
-        assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=900');
-        assert.deepEqual(await res.json(), { error: 'CelesTrak listed neither station', objects: [] });
-      });
-    }
-  },
-
-  async 'orbits: a single station keeps the normal answer and 2 h cache'() {
-    for (const id of [25544, 48274]) {
-      const objects = [{ NORAD_CAT_ID: id, OBJECT_NAME: `obj${id}` }];
-      await withUpstream(Response.json(objects), async () => {
-        const res = await orbits.fetch();
-        assert.equal(res.status, 200);
-        assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=7200');
-        assert.deepEqual(await res.json(), { objects });
-      });
-    }
-  },
-
-  async 'orbits: upstream throws, non-200 or non-array gives {error, objects: []}, caches 15 min'() {
-    for (const reply of [boom, new Response('busy', { status: 403 }), Response.json({ not: 'an array' }), new Response('not json')]) {
-      await withUpstream(reply, async () => {
-        const res = await orbits.fetch();
-        assert.equal(res.headers.get('Cache-Control'), 'public, s-maxage=900');
-        const json = await res.json();
-        assert.equal(typeof json.error, 'string');
-        assert.deepEqual(json.objects, []);
       });
     }
   },

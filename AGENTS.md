@@ -4,18 +4,18 @@ Read this, then `NOTES.md` (done / next / gotchas), then `README.md`.
 
 ## What this project is
 skyviu shows the planes you can actually see from Stanford right now, from public ADS-B data
-(live at sky.natwong.dev). It also shows the Moon, planets, ISS and Tiangong, a sky chart, the
-next planes to come into view, and a camera view that names the plane you point your phone at.
+(live at sky.natwong.dev). It also shows the Moon, planets, a sky chart and the next planes to
+come into view.
 
 - `index.html` is the whole app: one page, no build step, no framework.
-- `api/aircraft.mjs` (adsb.lol) and `api/orbits.mjs` (CelesTrak) are Vercel edge proxies.
+- `api/aircraft.mjs` is a Vercel edge proxy for adsb.lol.
 - `test/smoke.mjs` is a Playwright smoke test with `/api/*` mocked.
 
 ## Hard constraints
 - Keep it one page with no build step and no framework. No new runtime dependencies.
-- Do not change the proxies' caching, rounding of location (~1 km) or upstream URLs unless an
+- Do not change the proxy's caching, rounding of location (~1 km) or upstream URLs unless an
   issue asks for it.
-- `render()` rebuilds the head, card, Next and Also lists every 10 s: anything interactive in
+- `render()` rebuilds the head, card, Now and Next lists every 10 s: anything interactive in
   them needs a `data-focus` key or keyboard focus is lost (see NOTES.md gotchas).
 - Do not touch secrets, `.env`, deploy or infra config (`.vercelignore`, `.github/`), licensing
   or personal copy. No dependency upgrades (`package.json`, `package-lock.json`).
