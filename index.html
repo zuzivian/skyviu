@@ -59,11 +59,9 @@
   p { margin: 0 0 var(--s3); }
   a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 3px; }
   a:hover { text-decoration-color: currentColor; }
-  .muted { color: var(--muted); }
-  .small { font-size: var(--fs-body); }
 
   /* Chrome labels: B612 Mono, uppercase, letterspaced. */
-  .label, .status, #title, h2, h3, summary {
+  .label, .status, #title, h2, h3 {
     font: 400 var(--fs-label)/var(--lh-label) var(--font-data);
     text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
   }
@@ -97,15 +95,11 @@
     main { padding-top: var(--s4); }
   }
 
-  /* The answer for the selected plane. */
-  .head { display: flex; gap: var(--s5); align-items: center; justify-content: space-between; margin: 0 0 var(--s5); min-height: 92px; }
-  .head > div { min-width: 0; }
-  .head .name { font: 700 var(--fs-answer)/var(--lh-answer) var(--font-text); letter-spacing: -.01em; margin: 0 0 var(--s2); }
+  /* The answer for the selected plane: where to look, then what it is. No glyphs; the panorama is the picture. */
+  .head { margin: 0 0 var(--s5); }
+  .head .answer { font: 700 var(--fs-answer)/var(--lh-answer) var(--font-text); letter-spacing: -.01em; margin: 0 0 var(--s2); }
   .head .sub { font: 400 var(--fs-lead)/var(--lh-lead) var(--font-text); color: var(--muted); margin: 0; }
-  .head svg { flex: none; }
-
-  .head svg text { font-family: var(--font-text); font-size: var(--fs-body); }
-  .head svg text[font-weight="600"] { font-weight: 700; }
+  .head .sub .label { white-space: nowrap; }
 
   /* The horizon panorama (§5.3). On a phone the strip is 960px wide and scrolls sideways. */
   .pano { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
@@ -120,30 +114,47 @@
     svg#sky { width: 960px; }
   }
 
-  /* Below the chart: lists on the left, the plane and how it decides on the right. */
+  /* Below the panorama: the timeline on the left, the plane and how it decides on the right. */
   .lower { display: grid; grid-template-columns: 3fr 2fr; gap: var(--s7); align-items: start; margin-top: var(--s5); }
-  .lower > div { min-width: 0; }
+  .lower > * { min-width: 0; }
   @media (max-width: 899px) { .lower { grid-template-columns: 1fr; } }
-  h2 { margin: var(--s6) 0 var(--s3); }
+  h2 { margin: 0 0 var(--s3); }
   h3 { margin: var(--s5) 0 var(--s2); }
 
-  ul.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-  ul.list li { border-bottom: 1px solid var(--line); }
-  ul.list button { display: block; width: 100%; text-align: left; border: 0; border-radius: var(--r0); padding: var(--s3) var(--s1); }
-  ul.list button[aria-current="true"] .who { color: var(--visible); }
-  ul.next button { display: grid; grid-template-columns: var(--s8) 1fr; align-items: center; }
-  .when { font: 400 var(--fs-data)/var(--lh-data) var(--font-data); text-transform: uppercase; color: var(--soon); }
-  .who { font-weight: 700; }
-  .meta { display: block; font: 400 var(--fs-data)/var(--lh-data) var(--font-data); color: var(--muted); }
+  /* "In your sky": visible rows, then soon rows, as one list. */
+  ol.rows { list-style: none; margin: 0; padding: 0; }
+  ol.rows li.label { padding: var(--s3) 0; border-top: 1px solid var(--line); }
+  #next { border-bottom: 1px solid var(--line); }
+  ol.rows button {
+    display: grid; grid-template-columns: 64px 1fr auto 64px; gap: var(--s4); align-items: baseline;
+    width: 100%; padding: var(--s3) 0; text-align: left; background: none;
+    border: 0; border-top: 1px solid var(--line); border-radius: var(--r0);
+  }
+  ol.rows button[aria-current="true"] { border-left: 2px solid var(--visible); padding-left: var(--s2); }
+  #next button[aria-current="true"] { border-left-color: var(--soon); }
+  ol.rows button[aria-current="true"] .who { font-weight: 700; }
+  .when, .where { font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
+  .when { color: var(--visible); }
+  #next .when { color: var(--soon); }
+  .who { font: 400 var(--fs-body)/var(--lh-body) var(--font-text); min-width: 0; overflow-wrap: anywhere; }
+  .where { color: var(--muted); white-space: nowrap; }
+  .timeline .note { margin: var(--s3) 0 0; }
+  @media (max-width: 639px) {
+    /* The grade drops to its own line under the name. */
+    ol.rows button { grid-template-columns: 56px 1fr auto; row-gap: 0; }
+    ol.rows .grade { grid-column: 2; grid-row: 2; }
+    ol.rows .grade:empty { display: none; }
+  }
 
-  @media (min-width: 900px) { .lower > div + div { padding-top: var(--s6); } }
-  details { border-top: 1px solid var(--line); }
-  details:last-of-type { border-bottom: 1px solid var(--line); }
-  summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; }
-  .card[open] { padding-bottom: var(--s4); }
-  .card dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s2) var(--s4); margin: 0 0 var(--s4); }
-  .card dt { color: var(--muted); }
-  .card dd { margin: 0; }
+  /* This plane, then how it decides, as plain sections. */
+  .card dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s2) var(--s4); align-items: baseline; margin: 0 0 var(--s4); }
+  .card dd { margin: 0; font: 400 var(--fs-body)/var(--lh-body) var(--font-text); }
+  @media (max-width: 639px) {
+    .card dl { grid-template-columns: 1fr; row-gap: 0; }
+    .card dd { margin-bottom: var(--s3); }
+  }
+  .how { margin-top: var(--s6); }
+  /* The copy keeps its two bulleted lists. */
   .how ul { margin: 0 0 var(--s3); padding-left: var(--s5); }
   .how li { margin-bottom: var(--s1); }
 </style>
@@ -163,19 +174,17 @@
   </div>
 
   <div class="lower">
+    <section class="timeline" aria-labelledby="tl-h">
+      <h2 id="tl-h" class="label">In your sky</h2>
+      <ol id="now" class="rows"></ol>
+      <ol id="next" class="rows"></ol>
+      <p class="label note">If each plane flies straight. Planes turning to land often won't.</p>
+    </section>
     <div>
-      <h2>Planes you can see now</h2>
-      <ul id="now" class="list"></ul>
+      <section id="more" class="card" aria-labelledby="card-h" hidden><h2 id="card-h" class="label">This plane</h2><div id="card"></div></section>
 
-      <h2>Next planes to come into view</h2>
-      <ul id="next" class="list next"></ul>
-      <p class="muted small" style="margin-top:var(--s2)">If each plane flies straight. Planes turning to land often won't.</p>
-    </div>
-    <div>
-      <details id="more" class="card" hidden><summary>Flight details</summary><div id="card"></div></details>
-
-      <details class="card how">
-        <summary>How it decides what you can see</summary>
+      <section class="how">
+        <h2 class="label">How it decides what you can see</h2>
         <p>Every 10 seconds the page gets positions from public ADS-B receivers. Each second it moves every plane forward along its heading. A plane counts as one you can see when:</p>
         <ul>
           <li>It's at least 10° above the horizon, clear of most trees and roofs.</li>
@@ -193,7 +202,7 @@
           <li>Where a plane is going. Planes don't broadcast routes, and this page doesn't guess.</li>
           <li>Some identities. FAA privacy addresses hide the registration and type.</li>
         </ul>
-      </details>
+      </section>
     </div>
   </div>
 </main>
@@ -243,20 +252,6 @@
     BE20: 'Beechcraft King Air 200', BE36: 'Beechcraft Bonanza', DA40: 'Diamond DA40', DA42: 'Diamond DA42',
     R22: 'Robinson R22', R44: 'Robinson R44', EC35: 'Airbus H135', AS50: 'Airbus AS350', B06: 'Bell 206', B407: 'Bell 407',
   };
-  // readsb "type" field: how the position reached the receiver network.
-  const SOURCES = {
-    adsb_icao: 'received directly from the aircraft (ADS-B)',
-    adsb_icao_nt: 'ADS-B from a device without a transponder',
-    adsb_other: 'ADS-B with a non-standard address',
-    adsr_icao: 'rebroadcast by an FAA ground station (ADS-R)',
-    adsr_other: 'rebroadcast by an FAA ground station (ADS-R)',
-    tisb_icao: 'FAA radar track, rebroadcast (TIS-B)',
-    tisb_other: 'FAA radar track, rebroadcast (TIS-B)',
-    tisb_trackfile: 'FAA radar track, rebroadcast (TIS-B)',
-    mlat: 'worked out from signal timing at several receivers (MLAT)',
-    adsc: 'satellite report (ADS-C)',
-  };
-
   const NM = 25;               // query radius, nautical miles
   const REFRESH_MS = 10000;
   const STALE_S = 60;          // older positions are gray and not moved forward
@@ -273,7 +268,6 @@
   const NIGHT_MI = 25;         // at night, how far lights count; small planes use NIGHT_SMALL_MI
   const NIGHT_SMALL_MI = 10;
   const SUN_CLEAR = 15;        // degrees; closer to the sun than this is lost in glare
-  const MOON_ARCMIN = 31;      // the Moon's average apparent width
   const ARCMIN_PER_RAD = 3437.75;
   // Typical wingspan in meters for each ADS-B emitter category, from a common aircraft in it:
   // A1 Cessna 172, A2 CRJ200, A3 Airbus A320 and Boeing 737, A4 Boeing 757, A5 Boeing 787 and 777,
@@ -505,12 +499,6 @@
     if (/^N\d/.test(p.callsign)) return 'Flying under its US registration, typical of private flights.';
     if (!p.raw.r && !p.raw.t) return 'No registration. Maybe an FAA privacy address.';
     return '';
-  }
-  function lookText(p) {
-    if (p.onGround) return 'On the ground.';
-    if (p.el >= 75) return 'Almost straight overhead.';
-    if (p.el < 3) return `Right on the horizon, toward the ${compassWord(p.brg)}. Probably hidden by hills or buildings.`;
-    return `Look ${Math.round(p.el)}° up, toward the ${compassWord(p.brg)}.`;
   }
   function motionText(p) {
     const r = p.raw.baro_rate ?? p.raw.geom_rate;
@@ -805,59 +793,42 @@
       : 'Horizon view. No planes you can see right now. The list below has every plane.');
   }
 
-  // The answer, first: which plane is up there, and where to look for it.
+  // The answer, first: where to look, then which plane it is.
   function renderHead() {
     const head = $('head');
     const p = state.aircraft.find((a) => a.hex === state.selected);
     $('more').hidden = !p;
     head.replaceChildren();
-    const words = document.createElement('div');
-    head.append(words);
-    const line = (cls, text) => { const e = document.createElement('p'); e.className = cls; e.textContent = text; words.append(e); };
+    const para = (cls) => { const e = document.createElement('p'); e.className = cls; head.append(e); return e; };
     if (!p) {
-      line('sub', state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : 'Finding planes overhead.');
+      para('sub').textContent = state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : 'Finding planes overhead.';
       return;
     }
-    line('name', nameOf(p));
-    line('sub', typeOf(p));
-    line('sub', p.onGround ? 'On the ground' :
-      `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'Altitude unknown'} · ${(p.d / M_PER_MI).toFixed(1)} mi away`);
-    // How it will look, or why you can't see it yet.
-    const soon = state.next.find((n) => n.p.hex === p.hex);
-    if (p.see.ok) line('sub', p.see.lights ? 'Look for its lights' : sizeText(p.see.arcmin));
-    else if (soon) line('sub', `Comes into view in about ${Math.max(1, Math.round(soon.t / 60))} min`);
-    else line('sub', p.see.why);
-    if (p.see.ok) head.append(lookGlyph(p.brg, p.el, lookText(p)));
-    else if (soon) head.append(lookGlyph(soon.brg, soon.el, `It will appear ${Math.round(soon.el)}° up, toward the ${compassWord(soon.brg)}.`));
+    para('answer').textContent = answerText(p);
+    const sub = para('sub');
+    sub.textContent = [nameOf(p), typeOf(p), altitudeText(p)].join(' · ');
+    if (p.see.ok) {
+      const g = document.createElement('span');
+      g.className = 'label';
+      g.textContent = grade(p.see);
+      sub.append(' · ', g);
+    }
   }
-
-  // Apparent size, against something everyone has seen.
-  function sizeText(arcmin) {
-    const k = arcmin / MOON_ARCMIN;
-    if (k >= 1.25) return 'Looks wider than the Moon';
-    if (k >= 0.75) return 'Looks about as wide as the Moon';
-    return `Looks about 1/${Math.round(1 / k)} as wide as the Moon`;
+  // Where to look for a plane you can see now, or for one coming into view; otherwise why not.
+  function answerText(p) {
+    if (p.see.ok) return p.el >= 75 ? 'Look straight up' : `Look ${compass16(p.brg)}, ${Math.round(p.el)}° up`;
+    const n = state.next.find((s) => s.p.hex === p.hex);
+    if (n) return `In ${minutes(n.t)} min, look ${compass16(n.brg)}, ${Math.round(n.el)}° up`;
+    return p.see.why;
   }
-
-  // Where to look, as a picture: a compass arrow for the direction and a tilt for the angle.
-  function lookGlyph(brg, el, label) {
-    const muted = 'var(--muted)', text = 'var(--text)', accent = 'var(--visible)';
-    const p = { brg, el };
-    const s = svgEl('svg', { width: 150, height: 94, viewBox: '0 0 150 94', role: 'img', 'aria-label': label });
-    const cx = 34, cy = 42, r = 26, a = rad(p.brg);
-    s.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
-    s.append(svgEl('text', { x: cx, y: 12, fill: muted, 'text-anchor': 'middle' }, 'N'));
-    const tx = cx + (r - 6) * Math.sin(a), ty = cy - (r - 6) * Math.cos(a);
-    s.append(svgEl('line', { x1: cx, y1: cy, x2: tx.toFixed(1), y2: ty.toFixed(1), stroke: accent, 'stroke-width': 3, 'stroke-linecap': 'round' }));
-    s.append(svgEl('path', { d: 'M0,-7 L5.5,3 L-5.5,3 Z', transform: `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${Math.round(p.brg)})`, fill: accent }));
-    s.append(svgEl('text', { x: cx, y: 90, fill: text, 'font-weight': 600, 'text-anchor': 'middle' }, compassShort(p.brg)));
-    const ox = 86, oy = 70, qr = 56, e = rad(Math.max(0, Math.min(90, p.el)));
-    s.append(svgEl('path', { d: `M${ox + qr},${oy} A${qr},${qr} 0 0 0 ${ox},${oy - qr}`, fill: 'none', stroke: muted, 'stroke-width': 1.5 }));
-    s.append(svgEl('line', { x1: ox, y1: oy, x2: ox + qr, y2: oy, stroke: muted, 'stroke-width': 1.5 }));
-    s.append(svgEl('line', { x1: ox, y1: oy, x2: (ox + qr * Math.cos(e)).toFixed(1), y2: (oy - qr * Math.sin(e)).toFixed(1), stroke: accent, 'stroke-width': 3, 'stroke-linecap': 'round' }));
-    s.append(svgEl('text', { x: ox, y: 90, fill: text, 'font-weight': 600 }, `${Math.round(Math.max(0, p.el))}° up`));
-    return s;
+  function altitudeText(p) {
+    if (p.onGround) return 'On the ground';
+    if (p.altFt == null) return 'Altitude unknown';
+    const r = p.raw.baro_rate ?? p.raw.geom_rate;
+    const v = typeof r !== 'number' || Math.abs(r) <= 300 ? '' : (r > 0 ? ', climbing' : ', descending');
+    return `${fmt(p.altFt)} ft${v}`;
   }
+  const minutes = (t) => Math.max(1, Math.round(t / 60));
 
   function renderCard() {
     const card = $('card');
@@ -867,28 +838,22 @@
     const mi = p.d / M_PER_MI, slantMi = p.slant / M_PER_MI;
     const delay = p.slant / SOUND_MS;
     const moved = p.gs ? (p.gs * 1.15078 * delay / 3600) : 0;
-    const src = SOURCES[p.raw.type] || p.raw.type || 'unknown';
     const rows = [
       ['Aircraft', `${typeOf(p)}${p.raw.r ? `, ${p.raw.r}` : ''}`],
       ['Altitude', motionText(p)],
       ['Speed', p.gs != null ? `${fmt(p.gs * 1.15078)} mph` : 'Not in feed'],
       ['Distance', `${mi.toFixed(1)} mi, ${slantMi.toFixed(1)} mi in a straight line`],
-      ['Can you see it', p.see.ok ? (p.see.lights ? 'Yes, by its lights' : 'Yes') : `Not now. ${p.see.why}`],
-      ['Size in the sky', p.onGround ? 'On the ground' :
-        `${p.see.arcmin.toFixed(1)} arcminutes, from a typical ${SPAN_M[p.raw.category] || SPAN_M.A1} m wingspan for its class`],
-      ['Route', 'Not broadcast'],
-      ['Heard', `${Math.round(p.since)} s ago, ${src}`],
+      ['Heard', `${Math.round(p.since)} s ago`],
     ];
     if (!p.onGround && slantMi <= 8) {
       rows.push(['Sound', `${Math.round(delay)} s old when you hear it` + (moved >= 0.1 ? `, so look ${moved.toFixed(1)} mi ahead of it` : '')]);
     }
-    if (p.raw.squawk) rows.push(['Squawk', p.raw.squawk]);
     if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency', p.raw.emergency]);
     const note = whoNote(p);
     if (note) rows.push(['Note', note]);
     const dl = document.createElement('dl');
     rows.forEach(([k, v]) => {
-      const dt = document.createElement('dt'); dt.textContent = k;
+      const dt = document.createElement('dt'); dt.className = 'label'; dt.textContent = k;
       const dd = document.createElement('dd'); dd.textContent = v;
       dl.append(dt, dd);
     });
@@ -936,74 +901,47 @@
     return out.sort((a, b) => a.t - b.t).slice(0, 3);
   }
 
-  // The planes you can see, as buttons, so picking one doesn't need a pointer on the chart.
-  function renderNow() {
-    const ul = $('now');
-    ul.replaceChildren();
-    const list = seeable().sort(byEase);
-    if (!list.length) {
-      const li = document.createElement('li');
-      li.className = 'muted small';
-      li.style.padding = '10px 4px';
-      li.textContent = state.updatedAt ? 'None right now.' : 'Waiting for the first update.';
-      ul.append(li);
-      return;
-    }
-    list.forEach((p) => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.hex = p.hex;
-      b.dataset.focus = `now-${p.hex}`;
-      if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
-      const who = document.createElement('span');
-      who.className = 'who';
-      who.textContent = nameOf(p);
-      const meta = document.createElement('span');
-      meta.className = 'meta';
-      meta.textContent = `${Math.round(p.el)}° up ${compassShort(p.brg)} · ` +
-        `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'altitude unknown'} · ` +
-        (p.see.lights ? 'look for its lights' : sizeText(p.see.arcmin).toLowerCase());
-      b.append(who, meta);
-      li.append(b);
-      ul.append(li);
-    });
+  // "In your sky": the planes you can see, then the ones coming into view, as buttons, so picking
+  // one doesn't need a pointer on the panorama. Both lists are rebuilt every update.
+  function timelineRow(p, kind, { t, el, brg }) {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.hex = p.hex;
+    b.dataset.focus = `${kind}-${p.hex}`;
+    if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
+    const name = nameOf(p);
+    const g = kind === 'now' ? grade(p.see) : '';
+    b.setAttribute('aria-label', kind === 'now'
+      ? `${name}, visible now, ${Math.round(el)} degrees up, ${compass16(brg)}, ` +
+        (g === 'LIGHTS' ? 'look for its lights' : `${g.toLowerCase()} to spot`)
+      : `${name}, comes into view in ${minutes(t)} minutes, ${Math.round(el)} degrees up, ${compass16(brg)}`);
+    const cell = (cls, text) => { const e = document.createElement('span'); e.className = cls; e.textContent = text; b.append(e); };
+    cell('when', kind === 'now' ? 'NOW' : `${minutes(t)} MIN`);
+    cell('who', name);
+    cell('where', `${Math.round(el)}° ${compass16Short(brg)}`);
+    cell('grade label', g);
+    li.append(b);
+    return li;
   }
-
+  function emptyRow(text) {
+    const li = document.createElement('li');
+    li.className = 'label';
+    li.textContent = text;
+    return li;
+  }
+  function renderNow() {
+    const ol = $('now');
+    const list = seeable().sort(byEase);
+    ol.replaceChildren(...(list.length
+      ? list.map((p) => timelineRow(p, 'now', { el: p.el, brg: p.brg }))
+      : [emptyRow(state.updatedAt ? 'None right now.' : 'Waiting for the first update.')]));
+  }
   function renderNext() {
-    const ul = $('next');
-    ul.replaceChildren();
-    const list = state.next;
-    if (!list.length) {
-      const li = document.createElement('li');
-      li.className = 'muted small';
-      li.style.padding = '10px 4px';
-      li.textContent = state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : 'Waiting for the first update.';
-      ul.append(li);
-      return;
-    }
-    list.forEach(({ p, t, el, brg, ft }) => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.hex = p.hex;
-      b.dataset.focus = `next-${p.hex}`;
-      if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
-      const when = document.createElement('span');
-      when.className = 'when';
-      when.textContent = `${Math.max(1, Math.round(t / 60))} min`;
-      const right = document.createElement('span');
-      const who = document.createElement('span');
-      who.className = 'who';
-      who.textContent = nameOf(p);
-      const meta = document.createElement('span');
-      meta.className = 'meta';
-      meta.textContent = `${Math.round(el)}° up ${compassShort(brg)} · ${fmt(Math.round(ft / 100) * 100)} ft`;
-      right.append(who, meta);
-      b.append(when, right);
-      li.append(b);
-      ul.append(li);
-    });
+    const ol = $('next');
+    ol.replaceChildren(...(state.next.length
+      ? state.next.map((n) => timelineRow(n.p, 'next', n))
+      : [emptyRow(state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : 'Waiting for the first update.')]));
   }
 
   // ---------- the sun ----------
@@ -1184,7 +1122,8 @@
   });
   ['now', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button[data-hex]');
-    if (b) { select(b.dataset.hex); $('title').scrollIntoView({ block: 'start' }); }
+    // Bring the answer into view, then select: render() centres the panorama on the plane.
+    if (b) { $('title').scrollIntoView({ block: 'start' }); select(b.dataset.hex); }
   }));
 
   const placeSel = $('place');
