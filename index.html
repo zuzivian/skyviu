@@ -9,162 +9,171 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=B612+Mono&display=swap" rel="stylesheet">
 <style>
-  /* Design tokens (docs/redesign-2026-11.md §4). Light by day, dark at night or when the OS asks.
-     Every colour on the page comes from here; JS-drawn SVG uses var(--token) too. */
-  :root {
-    color-scheme: light;
-    --bg: #F3F5F7;
-    --raised: #FFFFFF;
-    --line: #D3DAE2;
-    --text: #0D1520;
-    --muted: #56626F;
-    --visible: #A34F00;
-    --soon: #0A64B8;
-    --faint: #9AA6B3;
-    --sun: #B07A00;
-    --error: #B3261E;
-    --below: rgba(13,21,32,.05);
+/* Design tokens (docs/redesign-2026-11.md §4): light by day, dark at night or when the OS asks.
+   JS-drawn SVG uses var(--token) too. */
+:root {
+  color-scheme: light;
+  --bg: #F3F5F7;
+  --raised: #FFFFFF;
+  --line: #D3DAE2;
+  --text: #0D1520;
+  --muted: #56626F;
+  --visible: #A34F00;
+  --soon: #0A64B8;
+  --faint: #9AA6B3;
+  --sun: #B07A00;
+  --error: #B3261E;
+  --below: rgba(13,21,32,.05);
 
-    --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-data: "B612 Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --fs-label: 12px; --fs-data: 14px; --fs-body: 16px; --fs-lead: 20px; --fs-answer: 40px;
-    --lh-label: 16px; --lh-data: 20px; --lh-body: 24px; --lh-lead: 28px; --lh-answer: 44px;
-    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
-    --r0: 0; --r1: 2px;
-    --gutter: var(--s6);
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --bg: #0A0E13;
-    --raised: #111821;
-    --line: #233041;
-    --text: #E8EEF4;
-    --muted: #8D9BAB;
-    --visible: #FFB547;
-    --soon: #6CC4FF;
-    --faint: #4A5869;
-    --sun: #FFD98A;
-    --error: #FF7A6B;
-    --below: rgba(232,238,244,.03);
-  }
-  @media (max-width: 639px) {
-    :root { --fs-answer: 28px; --lh-answer: 32px; --fs-lead: 16px; --gutter: var(--s4); }
-  }
+  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-data: "B612 Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* rem, so text follows the reader's font size. */
+  --fs-label: .75rem; --fs-data: .875rem; --fs-body: 1rem; --fs-lead: 1.25rem; --fs-answer: 2.5rem;
+  --lh-label: 1rem; --lh-data: 1.25rem; --lh-body: 1.5rem; --lh-lead: 1.75rem; --lh-answer: 2.75rem;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  --r0: 0; --r1: 2px;
+  --gutter: var(--s6);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0A0E13;
+  --raised: #111821;
+  --line: #233041;
+  --text: #E8EEF4;
+  --muted: #8D9BAB;
+  --visible: #FFB547;
+  --soon: #6CC4FF;
+  --faint: #4A5869;
+  --sun: #FFD98A;
+  --error: #FF7A6B;
+  --below: rgba(232,238,244,.03);
+}
+@media (max-width: 639px) {
+  :root { --fs-answer: 1.75rem; --lh-answer: 2rem; --fs-lead: 1rem; --gutter: var(--s4); }
+}
 
-  * { box-sizing: border-box; }
-  [hidden] { display: none !important; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 400 var(--fs-body)/var(--lh-body) var(--font-text); }
-  h1, h2, h3 { margin: 0; font-weight: 400; }
-  p { margin: 0 0 var(--s3); }
-  a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 3px; }
-  a:hover { text-decoration-color: currentColor; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 var(--fs-body)/var(--lh-body) var(--font-text); }
+h1, h2, h3 { margin: 0; font-weight: 400; }
+p { margin: 0 0 var(--s3); }
+a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+a:hover { text-decoration-color: currentColor; }
 
-  /* Chrome labels: B612 Mono, uppercase, letterspaced. */
-  .label, .status, #title, h2, h3 {
-    font: 400 var(--fs-label)/var(--lh-label) var(--font-data);
-    text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
-  }
-  .status.error { color: var(--error); }
-  /* Live and error carry an 8px square before the text; the colour is in the word too. */
-  .status.live::before, .status.error::before {
-    content: ''; display: inline-block; width: 8px; height: 8px; border-radius: var(--r0);
-    margin-right: var(--s2); background: var(--visible); vertical-align: 0;
-  }
-  .status.error::before { background: var(--error); }
+/* Chrome labels: B612 Mono, uppercase, letterspaced. */
+.label, .status, #title, h2, h3 {
+  font: 400 var(--fs-label)/var(--lh-label) var(--font-data);
+  text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+.status.error { color: var(--error); }
+/* Live and error carry an 8px square before the text; the colour is in the word too. */
+.status.live::before, .status.error::before {
+  content: ''; display: inline-block; width: 8px; height: 8px; margin-right: var(--s2); background: var(--visible);
+}
+.status.error::before { background: var(--error); }
 
-  select, button {
-    font: 400 var(--fs-body)/var(--lh-body) var(--font-text); color: var(--text); background: transparent;
-    border: 1px solid var(--line); border-radius: var(--r1); padding: var(--s2) var(--s3); min-height: 44px;
-  }
-  select option { background: var(--raised); color: var(--text); }
-  button { cursor: pointer; }
-  :focus-visible { outline: 2px solid var(--visible); outline-offset: 2px; }
+select, button {
+  font: 400 var(--fs-body)/var(--lh-body) var(--font-text); color: var(--text); background: transparent;
+  border: 1px solid var(--line); border-radius: var(--r1); padding: var(--s2) var(--s3); min-height: 44px;
+}
+select option { background: var(--raised); color: var(--text); }
+button { cursor: pointer; }
+/* Hover and focus: colour and opacity over 120 ms. Nothing scales (§4.4). */
+a, select, button { transition: color .12s, background-color .12s, border-color .12s, text-decoration-color .12s, opacity .12s; }
+select:hover, button:hover { border-color: var(--muted); }
+:focus-visible { outline: 2px solid var(--visible); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}
 
-  /* Shell: header bar, main, footer. Content and chrome share one 1600px column. */
-  .bar {
-    display: flex; align-items: center; gap: var(--s4); height: 56px;
-    padding: 0 max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter)));
-    background: var(--raised); border-bottom: 1px solid var(--line);
-  }
-  .mark { font: 700 var(--fs-body)/var(--lh-body) var(--font-text); }
-  .bar select { flex: 0 1 auto; min-width: 0; max-width: 360px; font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
-  .bar .status { margin: 0 0 0 auto; min-width: 0; text-align: right; }
-  main { max-width: 1600px; margin: 0 auto; padding: var(--s5) var(--gutter) var(--s7); }
-  #title { color: var(--visible); margin: 0 0 var(--s2); }
-  footer { margin: 0; padding: var(--s4) max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter))) var(--s6); border-top: 1px solid var(--line); }
-  @media (max-width: 639px) {
-    /* The 48px row holds the wordmark and place; the status line wraps under it until #52 moves it. */
-    .bar { height: auto; min-height: 48px; flex-wrap: wrap; row-gap: 0; }
-    .bar select { flex: 1 1 0; margin: 2px 0; }
-    .bar .status { flex: 1 0 100%; margin: 0; padding-bottom: var(--s2); text-align: left; }
-    main { padding-top: var(--s4); }
-  }
+/* Shell: header bar, main, footer. Content and chrome share one 1600px column. */
+.bar {
+  display: flex; align-items: center; gap: var(--s4); min-height: 56px;
+  padding: 0 max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter)));
+  background: var(--raised); border-bottom: 1px solid var(--line);
+}
+.mark { font-weight: 700; }
+.bar select { flex: 0 1 auto; min-width: 0; max-width: 360px; font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
+.bar .status { margin: 0 0 0 auto; min-width: 0; text-align: right; }
+main { max-width: 1600px; margin: 0 auto; padding: var(--s5) var(--gutter) var(--s7); }
+#title { color: var(--visible); margin: 0 0 var(--s2); }
+footer { margin: 0; padding: var(--s4) max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter))) var(--s6); border-top: 1px solid var(--line); }
+@media (max-width: 639px) {
+  /* The 48px row holds the wordmark and place; the status line wraps under it. */
+  .bar { min-height: 48px; flex-wrap: wrap; row-gap: 0; }
+  .bar select { flex: 1 1 0; margin: 2px 0; }
+  .bar .status { flex: 1 0 100%; margin: 0; padding-bottom: var(--s2); text-align: left; }
+  main { padding-top: var(--s4); }
+}
 
-  /* The answer for the selected plane: where to look, then what it is. No glyphs; the panorama is the picture. */
-  .head { margin: 0 0 var(--s5); }
-  .head .answer { font: 700 var(--fs-answer)/var(--lh-answer) var(--font-text); letter-spacing: -.01em; margin: 0 0 var(--s2); }
-  .head .sub { font: 400 var(--fs-lead)/var(--lh-lead) var(--font-text); color: var(--muted); margin: 0; }
-  .head .sub .label { white-space: nowrap; }
+/* The answer: where to look, then what it is. */
+.head { margin: 0 0 var(--s5); }
+.head .answer { font: 700 var(--fs-answer)/var(--lh-answer) var(--font-text); letter-spacing: -.01em; margin: 0 0 var(--s2); }
+.head .sub { font: 400 var(--fs-lead)/var(--lh-lead) var(--font-text); color: var(--muted); margin: 0; }
+.head .sub .label { white-space: nowrap; }
 
-  /* The horizon panorama (§5.3). On a phone the strip is 960px wide and scrolls sideways. */
-  .pano { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
-  svg#sky { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
-  #sky text { font: 400 11px/1 var(--font-text); }
-  #sky .t-lab { font: 400 var(--fs-label)/1 var(--font-data); letter-spacing: .08em; text-transform: uppercase; }
-  #sky .t-cmp { font: 400 var(--fs-label)/1 var(--font-data); letter-spacing: 1px; }
-  #sky .t-cs { font-size: 13px; }
-  #sky .t-cs.sel { font-weight: 700; }
-  /* After 30 s without fresh data the planes fade; the frame stays. */
-  .pano.stale .planes { opacity: .5; }
-  @media (max-width: 639px) {
-    .pano { margin: 0 calc(-1 * var(--gutter)); }
-    svg#sky { width: 960px; }
-  }
+/* The panorama (§5.3). On a phone the 960px strip scrolls sideways. */
+.pano { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
+svg#sky { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
+#sky text { font: 400 11px/1 var(--font-text); }
+#sky .t-lab, #sky .t-cmp { font: 400 12px/1 var(--font-data); letter-spacing: .08em; }
+#sky .t-lab { text-transform: uppercase; }
+#sky .t-cs { font-size: 13px; }
+#sky .t-cs.sel { font-weight: 700; }
+/* Planes glide between the 1 s ticks; a new selection ring fades in. */
+#sky .planes > * { transition: transform 1s linear; }
+#sky [data-hex] { cursor: pointer; }
+#sky .ring { transition: opacity .15s ease-out; }
+/* After 30 s without fresh data the planes fade; the frame stays. */
+.pano.stale .planes { opacity: .5; }
+@media (max-width: 639px) {
+  .pano { margin: 0 calc(-1 * var(--gutter)); }
+  svg#sky { width: 960px; }
+}
 
-  /* Below the panorama: the timeline on the left, the plane and how it decides on the right. */
-  .lower { display: grid; grid-template-columns: 3fr 2fr; gap: var(--s7); align-items: start; margin-top: var(--s5); }
-  .lower > * { min-width: 0; }
-  @media (max-width: 899px) { .lower { grid-template-columns: 1fr; } }
-  h2 { margin: 0 0 var(--s3); }
-  h3 { margin: var(--s5) 0 var(--s2); }
+/* Below the panorama: the timeline, then the plane and how it decides. */
+.lower { display: grid; grid-template-columns: 3fr 2fr; gap: var(--s7); align-items: start; margin-top: var(--s5); }
+.lower > * { min-width: 0; }
+@media (max-width: 899px) { .lower { grid-template-columns: 1fr; } }
+h2 { margin: 0 0 var(--s3); }
+h3 { margin: var(--s5) 0 var(--s2); }
 
-  /* "In your sky": visible rows, then soon rows, as one list. */
-  ol.rows { list-style: none; margin: 0; padding: 0; }
-  ol.rows li.label { padding: var(--s3) 0; border-top: 1px solid var(--line); }
-  #next { border-bottom: 1px solid var(--line); }
-  ol.rows button {
-    display: grid; grid-template-columns: 64px 1fr auto 64px; gap: var(--s4); align-items: baseline;
-    width: 100%; padding: var(--s3) 0; text-align: left; background: none;
-    border: 0; border-top: 1px solid var(--line); border-radius: var(--r0);
-  }
-  ol.rows button[aria-current="true"] { border-left: 2px solid var(--visible); padding-left: var(--s2); }
-  #next button[aria-current="true"] { border-left-color: var(--soon); }
-  ol.rows button[aria-current="true"] .who { font-weight: 700; }
-  .when, .where { font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
-  .when { color: var(--visible); }
-  #next .when { color: var(--soon); }
-  .who { font: 400 var(--fs-body)/var(--lh-body) var(--font-text); min-width: 0; overflow-wrap: anywhere; }
-  .where { color: var(--muted); white-space: nowrap; }
-  .timeline .note { margin: var(--s3) 0 0; }
-  @media (max-width: 639px) {
-    /* The grade drops to its own line under the name. */
-    ol.rows button { grid-template-columns: 56px 1fr auto; row-gap: 0; }
-    ol.rows .grade { grid-column: 2; grid-row: 2; }
-    ol.rows .grade:empty { display: none; }
-  }
+/* "In your sky": visible rows, then soon rows, as one list. */
+ol.rows { list-style: none; margin: 0; padding: 0; }
+ol.rows li.label { padding: var(--s3) 0; border-top: 1px solid var(--line); }
+#next { border-bottom: 1px solid var(--line); }
+ol.rows button {
+  display: grid; grid-template-columns: 4rem 1fr auto 4rem; gap: var(--s4); align-items: baseline;
+  width: 100%; padding: var(--s3) 0; text-align: left; background: none;
+  border: 0; border-top: 1px solid var(--line); border-radius: var(--r0);
+}
+ol.rows button[aria-current="true"] { border-left: 2px solid var(--visible); padding-left: var(--s2); }
+#next button[aria-current="true"] { border-left-color: var(--soon); }
+ol.rows button[aria-current="true"] .who { font-weight: 700; }
+.when, .where { font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
+.when { color: var(--visible); }
+#next .when { color: var(--soon); }
+.who { min-width: 0; overflow-wrap: anywhere; }
+.where { color: var(--muted); white-space: nowrap; }
+.timeline .note { margin: var(--s3) 0 0; }
+@media (max-width: 639px) {
+  /* The grade drops to its own line under the name. */
+  ol.rows button { grid-template-columns: 3.5rem 1fr auto; row-gap: 0; }
+  ol.rows .grade { grid-column: 2; grid-row: 2; }
+  ol.rows .grade:empty { display: none; }
+}
 
-  /* This plane, then how it decides, as plain sections. */
-  .card dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s2) var(--s4); align-items: baseline; margin: 0 0 var(--s4); }
-  .card dd { margin: 0; font: 400 var(--fs-body)/var(--lh-body) var(--font-text); }
-  @media (max-width: 639px) {
-    .card dl { grid-template-columns: 1fr; row-gap: 0; }
-    .card dd { margin-bottom: var(--s3); }
-  }
-  .how { margin-top: var(--s6); }
-  /* The copy keeps its two bulleted lists. */
-  .how ul { margin: 0 0 var(--s3); padding-left: var(--s5); }
-  .how li { margin-bottom: var(--s1); }
+/* This plane, then how it decides, as plain sections. */
+.card dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s2) var(--s4); align-items: baseline; margin: 0 0 var(--s4); }
+.card dd { margin: 0; }
+@media (max-width: 639px) {
+  .card dl { grid-template-columns: 1fr; row-gap: 0; }
+  .card dd { margin-bottom: var(--s3); }
+}
+.how { margin-top: var(--s6); }
+.how ul { margin: 0 0 var(--s3); padding-left: var(--s5); }
+.how li { margin-bottom: var(--s1); }
 </style>
 <noscript><style>#status, .pano, .timeline { display: none; }</style></noscript>
 </head>
@@ -222,999 +231,1010 @@
 
 <script>
 (() => {
-  const PLACES = [
-    { id: 'stanford', label: 'Stanford Main Quad', title: 'Stanford', lat: 37.4275, lon: -122.1703 },
-    { id: 'KPAO', label: 'Palo Alto Airport (PAO)', title: 'Palo Alto Airport', lat: 37.461102, lon: -122.114998 },
-    { id: 'KSFO', label: 'San Francisco International (SFO)', title: 'SFO', lat: 37.619806, lon: -122.374821 },
-    { id: 'KSJC', label: 'San Jose International (SJC)', title: 'San Jose Airport', lat: 37.362452, lon: -121.929188 },
-  ];
-  // ICAO airline prefixes seen around the Bay Area, plus common long-haul carriers.
-  const AIRLINES = {
-    AAL: 'American Airlines', AAR: 'Asiana Airlines', AAY: 'Allegiant Air', ABX: 'ABX Air', ACA: 'Air Canada',
-    AFR: 'Air France', AIC: 'Air India', AMX: 'Aeromexico', ANA: 'All Nippon Airways', ANZ: 'Air New Zealand',
-    ASA: 'Alaska Airlines', ASH: 'Mesa Airlines', BAW: 'British Airways', CAL: 'China Airlines', CCA: 'Air China',
-    CES: 'China Eastern', CKS: 'Kalitta Air', CPA: 'Cathay Pacific', CSN: 'China Southern', DAL: 'Delta Air Lines',
-    DLH: 'Lufthansa', EJA: 'NetJets', ENY: 'Envoy Air', ETD: 'Etihad Airways', EVA: 'EVA Air', FDX: 'FedEx',
-    FFT: 'Frontier Airlines', FIN: 'Finnair', GTI: 'Atlas Air', HAL: 'Hawaiian Airlines', IBE: 'Iberia',
-    JAL: 'Japan Airlines', JBU: 'JetBlue', KAL: 'Korean Air', KLM: 'KLM', NKS: 'Spirit Airlines', PAL: 'Philippine Airlines',
-    QFA: 'Qantas', QTR: 'Qatar Airways', QXE: 'Horizon Air', RPA: 'Republic Airways', SIA: 'Singapore Airlines',
-    SKW: 'SkyWest Airlines', SWA: 'Southwest Airlines', SWR: 'Swiss', THY: 'Turkish Airlines', UAE: 'Emirates',
-    UAL: 'United Airlines', UPS: 'UPS Airlines', VIR: 'Virgin Atlantic', VOI: 'Volaris', WJA: 'WestJet',
-  };
-  // ICAO aircraft type designators.
-  const TYPES = {
-    A19N: 'Airbus A319neo', A20N: 'Airbus A320neo', A21N: 'Airbus A321neo', A319: 'Airbus A319', A320: 'Airbus A320',
-    A321: 'Airbus A321', A332: 'Airbus A330-200', A333: 'Airbus A330-300', A339: 'Airbus A330-900', A359: 'Airbus A350-900',
-    A35K: 'Airbus A350-1000', A388: 'Airbus A380', BCS1: 'Airbus A220-100', BCS3: 'Airbus A220-300',
-    B712: 'Boeing 717', B737: 'Boeing 737-700', B738: 'Boeing 737-800', B739: 'Boeing 737-900', B37M: 'Boeing 737 MAX 7',
-    B38M: 'Boeing 737 MAX 8', B39M: 'Boeing 737 MAX 9', B3XM: 'Boeing 737 MAX 10', B744: 'Boeing 747-400', B748: 'Boeing 747-8',
-    B752: 'Boeing 757-200', B753: 'Boeing 757-300', B763: 'Boeing 767-300', B764: 'Boeing 767-400', B772: 'Boeing 777-200',
-    B77L: 'Boeing 777-200LR or 777F', B77W: 'Boeing 777-300ER', B788: 'Boeing 787-8', B789: 'Boeing 787-9', B78X: 'Boeing 787-10',
-    CRJ2: 'Bombardier CRJ200', CRJ7: 'Bombardier CRJ700', CRJ9: 'Bombardier CRJ900', DH8D: 'De Havilland Dash 8-400',
-    AT76: 'ATR 72-600', E170: 'Embraer 170', E75L: 'Embraer 175', E75S: 'Embraer 175', E190: 'Embraer 190', E290: 'Embraer 190-E2',
-    C152: 'Cessna 152', C172: 'Cessna 172 Skyhawk', C182: 'Cessna 182 Skylane', C208: 'Cessna 208 Caravan',
-    C25A: 'Cessna Citation CJ2', C25B: 'Cessna Citation CJ3', C56X: 'Cessna Citation Excel', C68A: 'Cessna Citation Latitude',
-    C700: 'Cessna Citation Longitude', CL35: 'Bombardier Challenger 350', CL60: 'Bombardier Challenger 600 series',
-    GLF4: 'Gulfstream IV', GLF5: 'Gulfstream V', GLF6: 'Gulfstream G650', GL5T: 'Bombardier Global 5000', GLEX: 'Bombardier Global Express',
-    E50P: 'Embraer Phenom 100', E55P: 'Embraer Phenom 300', PC12: 'Pilatus PC-12', PC24: 'Pilatus PC-24',
-    SR20: 'Cirrus SR20', SR22: 'Cirrus SR22', SF50: 'Cirrus Vision Jet', P28A: 'Piper PA-28', PA46: 'Piper PA-46',
-    BE20: 'Beechcraft King Air 200', BE36: 'Beechcraft Bonanza', DA40: 'Diamond DA40', DA42: 'Diamond DA42',
-    R22: 'Robinson R22', R44: 'Robinson R44', EC35: 'Airbus H135', AS50: 'Airbus AS350', B06: 'Bell 206', B407: 'Bell 407',
-  };
-  const NM = 25;               // query radius, nautical miles
-  const REFRESH_MS = 10000;
-  const STALE_S = 60;          // older positions are gray and not moved forward
-  const PROJECT_MAX_S = 90;    // never move a plane forward further than this
-  const NEXT_S = 600;          // how far ahead "Coming over next" looks
-  const KT_MS = 0.514444;      // meters per second in a knot
-  const EARTH_M = 6371008.8;
-  const SOUND_MS = 340;
-  const M_PER_MI = 1609.344;
+const PLACES = [
+  { id: 'stanford', label: 'Stanford Main Quad', title: 'Stanford', lat: 37.4275, lon: -122.1703 },
+  { id: 'KPAO', label: 'Palo Alto Airport (PAO)', title: 'Palo Alto Airport', lat: 37.461102, lon: -122.114998 },
+  { id: 'KSFO', label: 'San Francisco International (SFO)', title: 'SFO', lat: 37.619806, lon: -122.374821 },
+  { id: 'KSJC', label: 'San Jose International (SJC)', title: 'San Jose Airport', lat: 37.362452, lon: -121.929188 },
+];
+// ICAO airline prefixes seen around the Bay Area, plus common long-haul carriers.
+const AIRLINES = {
+  AAL: 'American Airlines', AAR: 'Asiana Airlines', AAY: 'Allegiant Air', ABX: 'ABX Air', ACA: 'Air Canada',
+  AFR: 'Air France', AIC: 'Air India', AMX: 'Aeromexico', ANA: 'All Nippon Airways', ANZ: 'Air New Zealand',
+  ASA: 'Alaska Airlines', ASH: 'Mesa Airlines', BAW: 'British Airways', CAL: 'China Airlines', CCA: 'Air China',
+  CES: 'China Eastern', CKS: 'Kalitta Air', CPA: 'Cathay Pacific', CSN: 'China Southern', DAL: 'Delta Air Lines',
+  DLH: 'Lufthansa', EJA: 'NetJets', ENY: 'Envoy Air', ETD: 'Etihad Airways', EVA: 'EVA Air', FDX: 'FedEx',
+  FFT: 'Frontier Airlines', FIN: 'Finnair', GTI: 'Atlas Air', HAL: 'Hawaiian Airlines', IBE: 'Iberia',
+  JAL: 'Japan Airlines', JBU: 'JetBlue', KAL: 'Korean Air', KLM: 'KLM', NKS: 'Spirit Airlines', PAL: 'Philippine Airlines',
+  QFA: 'Qantas', QTR: 'Qatar Airways', QXE: 'Horizon Air', RPA: 'Republic Airways', SIA: 'Singapore Airlines',
+  SKW: 'SkyWest Airlines', SWA: 'Southwest Airlines', SWR: 'Swiss', THY: 'Turkish Airlines', UAE: 'Emirates',
+  UAL: 'United Airlines', UPS: 'UPS Airlines', VIR: 'Virgin Atlantic', VOI: 'Volaris', WJA: 'WestJet',
+};
+// ICAO aircraft type designators, by maker: "code model, code model".
+const TYPES = {};
+Object.entries({
+  Airbus: 'A19N A319neo, A20N A320neo, A21N A321neo, A319 A319, A320 A320, A321 A321, A332 A330-200, ' +
+    'A333 A330-300, A339 A330-900, A359 A350-900, A35K A350-1000, A388 A380, BCS1 A220-100, ' +
+    'BCS3 A220-300, EC35 H135, AS50 AS350',
+  Boeing: 'B712 717, B737 737-700, B738 737-800, B739 737-900, B37M 737 MAX 7, B38M 737 MAX 8, ' +
+    'B39M 737 MAX 9, B3XM 737 MAX 10, B744 747-400, B748 747-8, B752 757-200, B753 757-300, ' +
+    'B763 767-300, B764 767-400, B772 777-200, B77L 777-200LR or 777F, B77W 777-300ER, B788 787-8, ' +
+    'B789 787-9, B78X 787-10',
+  Bombardier: 'CRJ2 CRJ200, CRJ7 CRJ700, CRJ9 CRJ900, CL35 Challenger 350, ' +
+    'CL60 Challenger 600 series, GL5T Global 5000, GLEX Global Express',
+  'De Havilland': 'DH8D Dash 8-400',
+  ATR: 'AT76 72-600',
+  Embraer: 'E170 170, E75L 175, E75S 175, E190 190, E290 190-E2, E50P Phenom 100, E55P Phenom 300',
+  Cessna: 'C152 152, C172 172 Skyhawk, C182 182 Skylane, C208 208 Caravan, C25A Citation CJ2, ' +
+    'C25B Citation CJ3, C56X Citation Excel, C68A Citation Latitude, C700 Citation Longitude',
+  Gulfstream: 'GLF4 IV, GLF5 V, GLF6 G650',
+  Pilatus: 'PC12 PC-12, PC24 PC-24',
+  Cirrus: 'SR20 SR20, SR22 SR22, SF50 Vision Jet',
+  Piper: 'P28A PA-28, PA46 PA-46',
+  Beechcraft: 'BE20 King Air 200, BE36 Bonanza',
+  Diamond: 'DA40 DA40, DA42 DA42',
+  Robinson: 'R22 R22, R44 R44',
+  Bell: 'B06 206, B407 407',
+}).forEach(([maker, list]) => list.split(', ').forEach((e) => { const i = e.indexOf(' '); TYPES[e.slice(0, i)] = `${maker} ${e.slice(i + 1)}`; }));
+const NM = 25;               // query radius, nautical miles
+const REFRESH_MS = 10000;
+const STALE_S = 60;          // older positions are gray and not moved forward
+const PROJECT_MAX_S = 90;    // never move a plane forward further than this
+const NEXT_S = 600;          // how far ahead "Coming over next" looks
+const KT_MS = 0.514444;      // meters per second in a knot
+const EARTH_M = 6371008.8;
+const SOUND_MS = 340;
+const M_PER_MI = 1609.344;
 
-  // What a person on the ground can pick out. These cutoffs are estimates, not measurements.
-  const MIN_EL = 10;           // degrees; lower than this is usually behind trees and roofs
-  const MIN_ARCMIN = 5;        // by day, the smallest apparent wingspan counted as spottable
-  const NIGHT_MI = 25;         // at night, how far lights count; small planes use NIGHT_SMALL_MI
-  const NIGHT_SMALL_MI = 10;
-  const SUN_CLEAR = 15;        // degrees; closer to the sun than this is lost in glare
-  const ARCMIN_PER_RAD = 3437.75;
-  // Typical wingspan in meters for each ADS-B emitter category, from a common aircraft in it:
-  // A1 Cessna 172, A2 CRJ200, A3 Airbus A320 and Boeing 737, A4 Boeing 757, A5 Boeing 787 and 777,
-  // A7 the rotor of a Robinson R44.
-  const SPAN_M = { A1: 11, A2: 21, A3: 35, A4: 38, A5: 62, A6: 10, A7: 10, B1: 15, B2: 15, B4: 10, B6: 3 };
-  const SMALL = new Set(['A1', 'A6', 'A7', 'B1', 'B4', 'B6']);
+// What a person on the ground can pick out: estimates, not measurements.
+const MIN_EL = 10;           // degrees; lower than this is usually behind trees and roofs
+const MIN_ARCMIN = 5;        // by day, the smallest apparent wingspan counted as spottable
+const NIGHT_MI = 25;         // at night, how far lights count; small planes use NIGHT_SMALL_MI
+const NIGHT_SMALL_MI = 10;
+const SUN_CLEAR = 15;        // degrees; closer to the sun than this is lost in glare
+const ARCMIN_PER_RAD = 3437.75;
+// Typical wingspan (m) per ADS-B category: A1 Cessna 172, A2 CRJ200, A3 A320/737, A4 757,
+// A5 787/777, A7 the rotor of an R44.
+const SPAN_M = { A1: 11, A2: 21, A3: 35, A4: 38, A5: 62, A6: 10, A7: 10, B1: 15, B2: 15, B4: 10, B6: 3 };
+const SMALL = new Set(['A1', 'A6', 'A7', 'B1', 'B4', 'B6']);
 
-  // Named places on the horizon, to face the right way without a compass.
-  const LANDMARKS = [['SFO', 37.6198, -122.3748], ['San Jose', 37.3337, -121.8907], ['The Dish', 37.4086, -122.1786], ['Mt Diablo', 37.8816, -121.9142], ['San Francisco', 37.7936, -122.3950]];
-  // Plane silhouettes in a 24x24 box, nose up, by ADS-B emitter category.
-  const LIGHT = 'M12 2L13 7L22 8V10L13 10.5L12.6 18L15.5 19.5V21L12 20.5L8.5 21V19.5L11.4 18L11 10.5L2 10V8L11 7Z';
-  const HEAVY = 'M12 .5L13.6 7L23.5 13.5V15.5L13.6 12.5L13 19.5L17 22V23.5L12 22.5L7 23.5V22L11 19.5L10.4 12.5L.5 15.5V13.5L10.4 7Z';
-  const SHAPES = {
-    A1: LIGHT, B1: LIGHT, B4: LIGHT, A4: HEAVY, A5: HEAVY, A6: HEAVY,
-    A7: 'M12 6a4 4 0 1 1 0 8a4 4 0 1 1 0-8ZM11.4 13.5H12.6V22H11.4ZM2 9.4H22V10.6H2Z',
-    default: 'M12 1L13.2 8L22 13V15L13.2 12.5L12.8 19L16 21.5V23L12 22L8 23V21.5L11.2 19L10.8 12.5L2 15V13L10.8 8Z',
-  };
+// Named places on the horizon, to face the right way without a compass.
+const LANDMARKS = [['SFO', 37.6198, -122.3748], ['San Jose', 37.3337, -121.8907], ['The Dish', 37.4086, -122.1786], ['Mt Diablo', 37.8816, -121.9142], ['San Francisco', 37.7936, -122.3950]];
+// Plane silhouettes in a 24x24 box, nose up, by ADS-B emitter category.
+const LIGHT = 'M12 2L13 7L22 8V10L13 10.5L12.6 18L15.5 19.5V21L12 20.5L8.5 21V19.5L11.4 18L11 10.5L2 10V8L11 7Z';
+const HEAVY = 'M12 .5L13.6 7L23.5 13.5V15.5L13.6 12.5L13 19.5L17 22V23.5L12 22.5L7 23.5V22L11 19.5L10.4 12.5L.5 15.5V13.5L10.4 7Z';
+const SHAPES = {
+  A1: LIGHT, B1: LIGHT, B4: LIGHT, A4: HEAVY, A5: HEAVY, A6: HEAVY,
+  A7: 'M12 6a4 4 0 1 1 0 8a4 4 0 1 1 0-8ZM11.4 13.5H12.6V22H11.4ZM2 9.4H22V10.6H2Z',
+  default: 'M12 1L13.2 8L22 13V15L13.2 12.5L12.8 19L16 21.5V23L12 22L8 23V21.5L11.2 19L10.8 12.5L2 15V13L10.8 8Z',
+};
 
-  const $ = (id) => document.getElementById(id);
-  const svg = $('sky');
-  const pano = svg.parentElement;
-  const rad = (d) => d * Math.PI / 180;
-  const deg = (r) => r * 180 / Math.PI;
-  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const $ = (id) => document.getElementById(id);
+const svg = $('sky');
+const pano = svg.parentElement;
+const rad = (d) => d * Math.PI / 180;
+const deg = (r) => r * 180 / Math.PI;
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
 
-  const state = {
-    obs: PLACES[0],
-    aircraft: [],
-    selected: null,
-    picked: false,           // the reader chose the selected plane
-    sun: { az: 0, el: -90 },
-    next: [],
-    wanted: null,            // plane named in a shared link, picked once data arrives
-    notice: '',
-    updatedAt: null,
-    error: '',
-    heard: false,            // any answer, good or bad, has come back since the page opened
-  };
+const state = {
+  obs: PLACES[0],
+  aircraft: [],
+  selected: null,
+  picked: false,           // the reader chose the selected plane
+  sun: { az: 0, el: -90 },
+  next: [],
+  wanted: null,            // plane named in a shared link, picked once data arrives
+  notice: '',
+  updatedAt: null,
+  error: '',
+  heard: false,            // any answer, good or bad, has come back since the page opened
+};
 
-  // ---------- geometry ----------
-  function geo(obs, lat, lon) {
-    const p1 = rad(obs.lat), p2 = rad(lat), dl = rad(lon - obs.lon);
-    const a = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
-    const d = 2 * EARTH_M * Math.asin(Math.min(1, Math.sqrt(a)));
-    const brg = (deg(Math.atan2(Math.sin(dl) * Math.cos(p2),
-      Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl))) + 360) % 360;
-    return { d, brg };
-  }
-  function project(lat, lon, brgDeg, distM) {
-    const p1 = rad(lat), l1 = rad(lon), b = rad(brgDeg), dr = distM / EARTH_M;
-    const p2 = Math.asin(Math.sin(p1) * Math.cos(dr) + Math.cos(p1) * Math.sin(dr) * Math.cos(b));
-    const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(dr) * Math.cos(p1), Math.cos(dr) - Math.sin(p1) * Math.sin(p2));
-    return { lat: deg(p2), lon: deg(l2) };
-  }
-  // Elevation angle above a flat horizon, allowing for the Earth's curve. Observer at sea level.
-  function elevation(dM, hM) {
-    const drop = dM * dM / (2 * EARTH_M);
-    return deg(Math.atan2(hM - drop, dM));
-  }
-  function compassWord(b) {
-    const words = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
-    return words[Math.round(b / 45) % 8];
-  }
-  function compassShort(b) {
-    return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(b / 45) % 8];
-  }
-  function compass16(b) {
-    return ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast',
-      'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'][Math.round(b / 22.5) % 16];
-  }
-  function compass16Short(b) {
-    return ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'][Math.round(b / 22.5) % 16];
-  }
+// ---------- geometry ----------
+function geo(obs, lat, lon) {
+  const p1 = rad(obs.lat), p2 = rad(lat), dl = rad(lon - obs.lon);
+  const a = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  const d = 2 * EARTH_M * Math.asin(Math.min(1, Math.sqrt(a)));
+  const brg = (deg(Math.atan2(Math.sin(dl) * Math.cos(p2),
+    Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl))) + 360) % 360;
+  return { d, brg };
+}
+function project(lat, lon, brgDeg, distM) {
+  const p1 = rad(lat), l1 = rad(lon), b = rad(brgDeg), dr = distM / EARTH_M;
+  const p2 = Math.asin(Math.sin(p1) * Math.cos(dr) + Math.cos(p1) * Math.sin(dr) * Math.cos(b));
+  const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(dr) * Math.cos(p1), Math.cos(dr) - Math.sin(p1) * Math.sin(p2));
+  return { lat: deg(p2), lon: deg(l2) };
+}
+// Elevation angle above a flat horizon, allowing for the Earth's curve. Observer at sea level.
+function elevation(dM, hM) {
+  const drop = dM * dM / (2 * EARTH_M);
+  return deg(Math.atan2(hM - drop, dM));
+}
+// Eight points are every other one of the sixteen.
+function compassWord(b) { return compass16(Math.round(b / 45) * 45); }
+function compassShort(b) { return compass16Short(Math.round(b / 45) * 45); }
+function compass16(b) {
+  return ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast',
+    'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'][Math.round(b / 22.5) % 16];
+}
+function compass16Short(b) {
+  return ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'][Math.round(b / 22.5) % 16];
+}
 
-  // Panorama mapping (§5.3). y: elevation to height, giving the 10–30° band 40% of it.
-  function panoY(el, top, bottom) {
-    // Stops as percent of the height from the bottom, so they land on exact pixels.
-    const stops = [[0, 0], [10, 15], [30, 55], [60, 85], [90, 100]];
-    const e = Math.max(0, Math.min(90, el));
-    let pct = 100;
-    for (let i = 1; i < stops.length; i++) {
-      const [e0, p0] = stops[i - 1], [e1, p1] = stops[i];
-      if (e <= e1) { pct = p0 + (e - e0) * (p1 - p0) / (e1 - e0); break; }
-    }
-    return bottom - pct * (bottom - top) / 100;
+// Panorama mapping (§5.3). y: elevation to height, giving the 10–30° band 40% of it.
+function panoY(el, top, bottom) {
+  // Stops as percent of the height from the bottom, so they land on exact pixels.
+  const stops = [[0, 0], [10, 15], [30, 55], [60, 85], [90, 100]];
+  const e = Math.max(0, Math.min(90, el));
+  let pct = 100;
+  for (let i = 1; i < stops.length; i++) {
+    const [e0, p0] = stops[i - 1], [e1, p1] = stops[i];
+    if (e <= e1) { pct = p0 + (e - e0) * (p1 - p0) / (e1 - e0); break; }
   }
-  // x: bearing across, north in the middle and south at both edges. Mobile is 2.4 px per
-  // degree with a 48 px margin each side for the copies near south.
-  function panoX(b, W, mobile) {
-    return mobile ? 48 + ((b + 180) % 360) * 2.4 : ((b + 180) % 360) / 360 * W;
-  }
-  // How easy a visible plane is to pick out. Estimates, relative to MIN_ARCMIN.
-  function grade(see) {
-    if (see.lights) return 'LIGHTS';
-    if (see.arcmin >= 15) return 'EASY';
-    if (see.arcmin >= 8) return 'FAIR';
-    return 'HARD';
-  }
-  // Silhouette size in px from apparent wingspan.
-  function glyphSize(arcmin) {
-    return Math.max(14, Math.min(28, 10 + arcmin * 0.8));
-  }
+  return bottom - pct * (bottom - top) / 100;
+}
+// x: bearing, N in the middle, S at both edges. Mobile: 2.4 px/° with 48 px margins.
+function panoX(b, W, mobile) {
+  return mobile ? 48 + ((b + 180) % 360) * 2.4 : ((b + 180) % 360) / 360 * W;
+}
+// How easy a visible plane is to pick out. Estimates, relative to MIN_ARCMIN.
+function grade(see) {
+  if (see.lights) return 'LIGHTS';
+  if (see.arcmin >= 15) return 'EASY';
+  if (see.arcmin >= 8) return 'FAIR';
+  return 'HARD';
+}
+// Silhouette size in px from apparent wingspan.
+function glyphSize(arcmin) {
+  return Math.max(14, Math.min(28, 10 + arcmin * 0.8));
+}
 
-  // ---------- data ----------
-  function enrich(a, nowMs, fetchedAt) {
-    // Some aircraft on a runway or taxiway report a small altitude instead of "ground".
-    // Treat slow and low as on the ground.
-    const onGround = a.alt_baro === 'ground' ||
-      (typeof a.alt_baro === 'number' && a.alt_baro < 500 && typeof a.gs === 'number' && a.gs < 50);
-    const ft = typeof a.alt_geom === 'number' ? a.alt_geom : (typeof a.alt_baro === 'number' ? a.alt_baro : 0);
-    const lag = Math.max(0, (fetchedAt - nowMs) / 1000);
-    return locate({
-      raw: a, hex: a.hex, onGround, ft, fetchedAt,
-      age: (a.seen_pos ?? a.seen ?? 0) + lag,   // seconds old when it reached this page
-      altFt: typeof a.alt_baro === 'number' ? a.alt_baro : null,
-      gs: typeof a.gs === 'number' ? a.gs : null,
-      track: typeof a.track === 'number' ? a.track : (typeof a.true_heading === 'number' ? a.true_heading : null),
-      callsign: (a.flight || '').trim(),
-    }, fetchedAt);
-  }
+// ---------- data ----------
+function enrich(a, nowMs, fetchedAt) {
+  // Some aircraft on a runway report a small altitude, not "ground": slow and low is ground.
+  const onGround = a.alt_baro === 'ground' ||
+    (typeof a.alt_baro === 'number' && a.alt_baro < 500 && typeof a.gs === 'number' && a.gs < 50);
+  const ft = typeof a.alt_geom === 'number' ? a.alt_geom : (typeof a.alt_baro === 'number' ? a.alt_baro : 0);
+  const lag = Math.max(0, (fetchedAt - nowMs) / 1000);
+  return locate({
+    raw: a, hex: a.hex, onGround, ft, fetchedAt,
+    age: (a.seen_pos ?? a.seen ?? 0) + lag,   // seconds old when it reached this page
+    altFt: typeof a.alt_baro === 'number' ? a.alt_baro : null,
+    gs: typeof a.gs === 'number' ? a.gs : null,
+    track: typeof a.track === 'number' ? a.track : (typeof a.true_heading === 'number' ? a.true_heading : null),
+    callsign: (a.flight || '').trim(),
+  }, fetchedAt);
+}
 
-  // Where a plane should be at atMs: its last position moved along its track at its last speed
-  // and climb. A position that was already stale when it arrived stays where it was heard.
-  function locate(p, atMs) {
-    p.since = p.age + Math.max(0, (atMs - p.fetchedAt) / 1000);
-    p.moved = !p.onGround && p.gs != null && p.track != null && p.age <= STALE_S;
-    p.lat = p.raw.lat; p.lon = p.raw.lon; p.ftNow = p.onGround ? 0 : p.ft;
-    if (p.moved) {
-      const s = Math.min(p.since, PROJECT_MAX_S);
-      const to = project(p.raw.lat, p.raw.lon, p.track, p.gs * KT_MS * s);
-      const rate = p.raw.baro_rate ?? p.raw.geom_rate;
-      p.lat = to.lat; p.lon = to.lon;
-      if (typeof rate === 'number') p.ftNow = Math.max(0, p.ft + rate * s / 60);
-    }
-    const { d, brg } = geo(state.obs, p.lat, p.lon);
-    const h = p.ftNow * 0.3048;
-    p.d = d; p.brg = brg; p.el = elevation(d, h);
-    p.slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
-    return p;
+// Where a plane is at atMs: moved on along its track, speed and climb, unless already stale.
+function locate(p, atMs) {
+  p.since = p.age + Math.max(0, (atMs - p.fetchedAt) / 1000);
+  p.moved = !p.onGround && p.gs != null && p.track != null && p.age <= STALE_S;
+  p.lat = p.raw.lat; p.lon = p.raw.lon; p.ftNow = p.onGround ? 0 : p.ft;
+  if (p.moved) {
+    const s = Math.min(p.since, PROJECT_MAX_S);
+    const to = project(p.raw.lat, p.raw.lon, p.track, p.gs * KT_MS * s);
+    const rate = p.raw.baro_rate ?? p.raw.geom_rate;
+    p.lat = to.lat; p.lon = to.lon;
+    if (typeof rate === 'number') p.ftNow = Math.max(0, p.ft + rate * s / 60);
   }
-  function updatePositions(atMs) {
-    state.aircraft.forEach((p) => locate(p, atMs));
-  }
+  const { d, brg } = geo(state.obs, p.lat, p.lon);
+  const h = p.ftNow * 0.3048;
+  p.d = d; p.brg = brg; p.el = elevation(d, h);
+  p.slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
+  return p;
+}
+function updatePositions(atMs) {
+  state.aircraft.forEach((p) => locate(p, atMs));
+}
 
-  // Angle between two directions in the sky, in degrees.
-  function apart(az1, el1, az2, el2) {
-    const c = Math.sin(rad(el1)) * Math.sin(rad(el2)) + Math.cos(rad(el1)) * Math.cos(rad(el2)) * Math.cos(rad(az1 - az2));
-    return deg(Math.acos(Math.max(-1, Math.min(1, c))));
+// Angle between two directions in the sky, in degrees.
+function apart(az1, el1, az2, el2) {
+  const c = Math.sin(rad(el1)) * Math.sin(rad(el2)) + Math.cos(rad(el1)) * Math.cos(rad(el2)) * Math.cos(rad(az1 - az2));
+  return deg(Math.acos(Math.max(-1, Math.min(1, c))));
+}
+// Could a person standing at the observer pick this plane out with their eyes?
+function sight(el, slant, brg, cat, sun) {
+  const arcmin = (SPAN_M[cat] || SPAN_M.A1) / slant * ARCMIN_PER_RAD;
+  const out = (why) => ({ ok: false, arcmin, why });
+  if (el < MIN_EL) return out(`Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`);
+  if (sun.el > 0 && apart(brg, el, sun.az, sun.el) < SUN_CLEAR) return out('Lost in the sun\'s glare.');
+  // After civil twilight, lights carry further than shapes.
+  if (sun.el < -6) {
+    const mi = SMALL.has(cat) || !SPAN_M[cat] ? NIGHT_SMALL_MI : NIGHT_MI;
+    return slant <= mi * M_PER_MI ? { ok: true, arcmin, lights: true } : out('Too far for its lights to stand out.');
   }
-  // Could a person standing at the observer pick this plane out with their eyes?
-  function sight(el, slant, brg, cat, sun) {
-    const arcmin = (SPAN_M[cat] || SPAN_M.A1) / slant * ARCMIN_PER_RAD;
-    const out = (why) => ({ ok: false, arcmin, why });
-    if (el < MIN_EL) return out(`Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`);
-    if (sun.el > 0 && apart(brg, el, sun.az, sun.el) < SUN_CLEAR) return out('Lost in the sun\'s glare.');
-    // After civil twilight the sky is dark enough that lights carry further than shapes.
-    if (sun.el < -6) {
-      const mi = SMALL.has(cat) || !SPAN_M[cat] ? NIGHT_SMALL_MI : NIGHT_MI;
-      return slant <= mi * M_PER_MI ? { ok: true, arcmin, lights: true } : out('Too far for its lights to stand out.');
-    }
-    return arcmin >= MIN_ARCMIN ? { ok: true, arcmin } : out('Too small to spot at this distance.');
-  }
-  function judge(p) {
-    if (p.onGround) return { ok: false, arcmin: 0, why: 'On the ground.' };
-    if (p.since > STALE_S) return { ok: false, arcmin: 0, why: 'Not heard for over a minute, so its position is unsure.' };
-    return sight(p.el, p.slant, p.brg, p.raw.category, state.sun);
-  }
-  // Easiest to spot first: the one that looks biggest.
-  function byEase(a, b) {
-    return (b.see.ok - a.see.ok) || (b.see.arcmin - a.see.arcmin);
-  }
+  return arcmin >= MIN_ARCMIN ? { ok: true, arcmin } : out('Too small to spot at this distance.');
+}
+function judge(p) {
+  if (p.onGround) return { ok: false, arcmin: 0, why: 'On the ground.' };
+  if (p.since > STALE_S) return { ok: false, arcmin: 0, why: 'Not heard for over a minute, so its position is unsure.' };
+  return sight(p.el, p.slant, p.brg, p.raw.category, state.sun);
+}
+// Easiest to spot first: the one that looks biggest.
+function byEase(a, b) {
+  return (b.see.ok - a.see.ok) || (b.see.arcmin - a.see.arcmin);
+}
 
-  // One request at a time. If the reader moves while one is on its way, it is cancelled and the
-  // new place is asked for straight away.
-  let inflight = null;   // { obs, ctrl }
-  async function load() {
-    const obs = state.obs;
-    if (inflight) {
-      if (inflight.obs === obs) return;
-      inflight.ctrl.abort();
-    }
-    const req = inflight = { obs, ctrl: new AbortController() };
-    // Only a rounded location (about 1 km) leaves the browser.
-    const url = `/api/aircraft?lat=${obs.lat.toFixed(2)}&lon=${obs.lon.toFixed(2)}&nm=${NM}`;
-    try {
-      const r = await fetch(url, { cache: 'no-store', signal: req.ctrl.signal });
-      const j = await r.json().catch(() => ({}));
-      if (req !== inflight) return;
-      if (!r.ok) throw new Error(j.error || `status ${r.status}`);
-      if (!Array.isArray(j.ac)) throw new Error('unexpected answer');
-      const fetchedAt = Date.now();
-      const withPos = (j.ac || []).filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number');
-      state.aircraft = withPos.map((a) => enrich(a, j.now || fetchedAt, fetchedAt));
-      state.updatedAt = new Date(fetchedAt);
-      state.error = '';
-    } catch (e) {
-      if (req === inflight) state.error = e.message || 'unknown error';
-    } finally {
-      // A cancelled request has already been replaced; only the current one renders.
-      if (req === inflight) { inflight = null; state.heard = true; render(); }
-    }
+// One request at a time; a place change cancels it and asks for the new place at once.
+let inflight = null;   // { obs, ctrl }
+async function load() {
+  const obs = state.obs;
+  if (inflight) {
+    if (inflight.obs === obs) return;
+    inflight.ctrl.abort();
   }
-
-  let timer = null;
-  function schedule() {
-    clearInterval(timer);
-    if (document.visibilityState === 'visible') {
-      load();
-      timer = setInterval(load, REFRESH_MS);
-    }
-  }
-
-  // ---------- naming ----------
-  function nameOf(p) {
-    const cs = p.callsign;
-    const m = cs.match(/^([A-Z]{3})(\d[0-9A-Z]*)$/);
-    if (m && AIRLINES[m[1]]) return `${AIRLINES[m[1]]} ${m[2]}`;
-    return cs || p.raw.r || p.hex.toUpperCase();
-  }
-  function typeOf(p) {
-    const cat = p.raw.category;
-    if (cat === 'C1' || cat === 'C2') return 'Airport ground vehicle';
-    const t = p.raw.t;
-    if (t && TYPES[t]) return TYPES[t];
-    if (t) return `Type code ${t}`;
-    if (cat === 'A7') return 'Helicopter, model not in feed';
-    return 'Type not in feed';
-  }
-  function whoNote(p) {
-    if (/^N\d/.test(p.callsign)) return 'Flying under its US registration, typical of private flights.';
-    if (!p.raw.r && !p.raw.t) return 'No registration. Maybe an FAA privacy address.';
-    return '';
-  }
-  function motionText(p) {
-    const r = p.raw.baro_rate ?? p.raw.geom_rate;
-    if (p.onGround) return p.gs ? `Moving at ${fmt(p.gs)} knots on the ground.` : 'Stopped.';
-    let v = 'level';
-    if (typeof r === 'number' && r > 300) v = `climbing ${fmt(r)} ft per minute`;
-    if (typeof r === 'number' && r < -300) v = `descending ${fmt(-r)} ft per minute`;
-    const dir = p.track != null ? `, heading ${compassWord(p.track)}` : '';
-    return `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'Altitude unknown'}, ${v}${dir}.`;
-  }
-
-  // ---------- rendering ----------
-  const seeable = () => state.aircraft.filter((p) => p.see.ok);
-
-  function render() {
-    // Lists and the card are rebuilt on every update. Put keyboard focus back where it was.
-    const focusKey = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.focus : null;
-    updatePositions(Date.now());
-    state.sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
-    document.documentElement.dataset.theme = (matchMedia('(prefers-color-scheme: dark)').matches || state.sun.el < -6) ? 'dark' : 'light';
-    state.aircraft.forEach((p) => { p.see = judge(p); });
-    state.next = upcoming();
-    // A shared link names a plane; pick it once the first update arrives.
-    if (state.wanted && state.updatedAt) {
-      if (state.aircraft.some((a) => a.hex === state.wanted)) { state.selected = state.wanted; state.picked = true; }
-      else state.notice = 'The plane in that link has left the area.';
-      state.wanted = null;
-    }
-    // Until the reader picks one, show the easiest plane to spot, or else the next one coming.
-    const pool = seeable().sort(byEase);
-    const gone = !state.aircraft.some((a) => a.hex === state.selected);
-    const stale = !state.picked && pool.length && !pool.some((a) => a.hex === state.selected);
-    if (!state.selected || gone || stale) {
-      state.selected = pool[0] ? pool[0].hex : (state.next[0] ? state.next[0].p.hex : null);
-      state.picked = false;
-    }
-    renderStatus();
-    const view = renderChart();
-    describeSky();
-    renderHead();
-    renderCard();
-    renderNow();
-    renderNext();
-    centreSelected(view);
-    if (focusKey && !document.activeElement.dataset.focus) {
-      const again = document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);
-      if (again) again.focus({ preventScroll: true });
-    }
-  }
-
-  function renderStatus() {
-    const el = $('status'), title = $('title');
-    const air = state.aircraft.filter((p) => !p.onGround).length;
-    const n = seeable().length;
-    title.replaceChildren();
-    if (state.updatedAt) {
-      const num = document.createElement('span');
-      num.className = 'n';
-      num.textContent = n ? String(n) : 'No';
-      title.append(num, ` plane${n === 1 ? '' : 's'} you can see from ${state.obs.title}`);
-    } else title.textContent = `Planes you can see from ${state.obs.title}`;
-    const cls = (c) => { if (el.className !== c) el.className = c; };
-    if (state.error) {
-      cls('status error');
-      setText(el, `No answer from the data source (${state.error}). Retrying every ${REFRESH_MS / 1000} s.`);
-      return;
-    }
-    if (!state.updatedAt) {
-      // Before anything has come back the page is connecting; after a place change it's finding planes there.
-      cls('status');
-      setText(el, state.heard ? 'Finding planes.' : 'Connecting to adsb.lol');
-      return;
-    }
-    cls('status live');
-    setText(el, `Live · ${n} of ${air} planes within ${Math.round(NM * 1852 / M_PER_MI)} miles` +
-      (state.notice ? `. ${state.notice}` : ''));
-  }
-
-  function svgEl(tag, attrs, text) {
-    const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    if (text != null) e.textContent = text;
-    return e;
-  }
-
-  // Text widths for label collisions, measured on a canvas so the 1 s tick never forces layout.
-  const widths = new Map();
-  const measurer = document.createElement('canvas').getContext('2d');
-  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => widths.clear());
-  function textWidth(s, size, data, weight = 400, spacing = 0) {
-    const key = `${size}|${data}|${weight}|${spacing}|${s}`;
-    if (!widths.has(key)) {
-      const family = getComputedStyle(document.documentElement).getPropertyValue(data ? '--font-data' : '--font-text');
-      measurer.font = `${weight} ${size}px ${family || 'sans-serif'}`;
-      widths.set(key, measurer.measureText(s).width + spacing * s.length);
-    }
-    return widths.get(key);
-  }
-  const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-
-  // The horizon panorama (docs/redesign-2026-11.md §5.3): bearing across with north in the
-  // middle, elevation up with the 10–30° band given most of the height.
-  function renderChart() {
-    const mobile = matchMedia('(max-width: 639px)').matches;
-    const W = mobile ? 864 + 2 * 48 : Math.max(300, Math.round(pano.clientWidth) || 960);
-    const H = mobile ? 280 : 360;
-    const top = 24, bottom = H - 40;
-    const scale = mobile ? 2.4 : W / 360;   // px per degree of bearing
-    const period = 360 * scale;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.replaceChildren();
-    const X = (b) => panoX(b, W, mobile);
-    const Y = (el) => panoY(el, top, bottom);
-    const crisp = (y) => Math.round(y) + 0.5;
-    // Every x a point is drawn at. On mobile anything near S is drawn again 864 px away so it
-    // is never cut in half; on desktop the same happens for marks that touch the S edges.
-    const xsOf = (x) => {
-      const out = [x];
-      const lo = mobile ? 0 : -24, hi = mobile ? W : W + 24;
-      for (const c of [x - period, x + period]) if (c >= lo && c <= hi) out.push(c);
-      return out;
-    };
-    // Screen angle (0 = up, clockwise) from one sky point to another, across the S seam too.
-    const screenAngle = (b1, e1, b2, e2) => deg(Math.atan2(((b2 - b1 + 540) % 360 - 180) * scale, -(Y(e2) - Y(e1))));
-    const fix = (n) => n.toFixed(1);
-
-    const line = 'var(--line)', muted = 'var(--muted)', text = 'var(--text)';
-    const g = svgEl('g', {});
-    svg.append(g);
-
-    // The 0–10° band, mostly behind trees and roofs.
-    g.append(svgEl('rect', { x: 0, y: fix(Y(10)), width: W, height: fix(bottom - Y(10)), fill: 'var(--below)' }));
-    [[10, '10° · tree line'], [30, '30°'], [60, '60°']].forEach(([e, label]) => {
-      const y = crisp(Y(e));
-      g.append(svgEl('line', { x1: 0, y1: y, x2: W, y2: y, stroke: line, 'stroke-width': 1, ...(e === 10 ? { 'stroke-dasharray': '2 4' } : {}) }));
-      g.append(svgEl('text', { x: 4, y: fix(Y(e) - 6), fill: muted, class: 't-lab' }, label));
-    });
-    g.append(svgEl('text', { x: 4, y: top - 8, fill: muted, class: 't-lab' }, 'overhead'));   // uppercased by CSS
-    g.append(svgEl('line', { x1: 0, y1: crisp(bottom), x2: W, y2: crisp(bottom), stroke: muted, 'stroke-width': 1 }));
-    // No data ever: the grid alone says the page is there but has nothing to put on it.
-    const blind = state.error && !state.updatedAt;
-    pano.classList.toggle('stale', !!(state.error && state.updatedAt && Date.now() - state.updatedAt > 30000));
-    if (blind) return { W, X, scale };
-
-    // Compass ribbon: a tick every 15°, longer every 45°, with a letter under each long tick.
-    const LETTERS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    for (let b = 0; b < 360; b += 15) {
-      const major = b % 45 === 0;
-      xsOf(X(b)).forEach((x) => {
-        g.append(svgEl('line', { x1: fix(x), y1: bottom, x2: fix(x), y2: bottom + (major ? 10 : 5), stroke: muted, 'stroke-width': 1 }));
-        if (!major) return;
-        const letter = LETTERS[b / 45];
-        // Keep the S at each edge inside the picture.
-        const anchor = x < 8 ? 'start' : (x > W - 8 ? 'end' : 'middle');
-        g.append(svgEl('text', {
-          x: anchor === 'start' ? 2 : (anchor === 'end' ? W - 2 : fix(x)), y: bottom + 26,
-          fill: letter === 'N' ? text : muted, 'text-anchor': anchor, class: 't-cmp',
-        }, letter));
-      });
-    }
-
-    // Landmarks on the horizon, so you can face the right way without a compass.
-    const marks = [];
-    LANDMARKS.forEach(([name, lat, lon]) => {
-      const { d, brg } = geo(state.obs, lat, lon);
-      if (d < 1000) return;   // standing on it
-      const w = textWidth(name, 11, false);
-      xsOf(X(brg)).forEach((x) => {
-        const box = { x: x - w / 2 - 2, y: bottom - 17, w: w + 4, h: 13 };
-        if (box.x < 0 || box.x + box.w > W || marks.some((m) => overlaps(m, box))) return;
-        marks.push(box);
-        g.append(svgEl('text', { x: fix(x), y: bottom - 6, fill: muted, 'text-anchor': 'middle', class: 't-small' }, name));
-      });
-    });
-
-    // The sun and its glare zone: planes inside the dashed circle aren't counted.
-    if (state.sun.el > 0) {
-      const y = Y(state.sun.el);
-      xsOf(X(state.sun.az)).forEach((x) => {
-        g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: fix(SUN_CLEAR * scale), fill: 'none', stroke: 'var(--sun)', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.4 }));
-        g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: 8, fill: 'var(--sun)' }));
-      });
-    }
-
-    // The Moon and the planets you can see; Venus and Jupiter are often taken for planes.
-    skyBodies(new Date()).filter((b) => b.ok).forEach((b) => {
-      const y = Y(b.el);
-      xsOf(X(b.az)).forEach((x) => {
-        if (b.kind === 'moon') {
-          const t = towardSun(b, state.sun);
-          g.append(moonGlyph(x, y, 9, screenAngle(b.az, b.el, t.az, t.el), b.lit, muted));
-          return;
-        }
-        g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: 3, fill: text }));
-        g.append(svgEl('text', { x: fix(x + 6), y: fix(y + 4), fill: muted, class: 't-small' }, b.name));
-      });
-    });
-
-    // Planes. Faint dots for the ones you can't see, then soon outlines, then visible silhouettes.
-    // They share one layer so stale data can fade them without the frame.
-    const planes = svgEl('g', { class: 'planes' });
-    g.append(planes);
-    const soon = new Map(state.next.map((n) => [n.p.hex, n]));
-    const air = state.aircraft.filter((p) => !p.onGround);
-    air.filter((p) => !p.see.ok && !soon.has(p.hex) && p.hex !== state.selected).forEach((p) => {
-      xsOf(X(p.brg)).forEach((x) => planes.append(svgEl('circle', { cx: fix(x), cy: fix(Y(p.el)), r: 2.5, fill: 'var(--faint)' })));
-    });
-
-    // Which way a plane appears to move: from where it is to where it is 30 s on.
-    const heading = (p, lat, lon, ft, brg, el) => {
-      if (p.track == null) return 0;
-      const ahead = project(lat, lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
-      const q = geo(state.obs, ahead.lat, ahead.lon);
-      return screenAngle(brg, el, q.brg, elevation(q.d, ft * 0.3048));
-    };
-    const glyph = (p, size, angle, kind) => svgEl('path', {
-      d: SHAPES[p.raw.category] || SHAPES.default,
-      transform: `rotate(${angle.toFixed(0)}) scale(${(size / 24).toFixed(3)}) translate(-12 -12)`,
-      ...(kind === 'soon'
-        ? { fill: 'none', stroke: 'var(--soon)', 'stroke-dasharray': '2 2', 'vector-effect': 'non-scaling-stroke', 'stroke-width': 1.5 }
-        : { fill: kind === 'visible' ? 'var(--visible)' : 'var(--faint)' }),
-    });
-
-    // Each plane to draw with a mark: where its glyph sits and how it looks.
-    const drawn = air.filter((p) => p.see.ok || soon.has(p.hex) || p.hex === state.selected).map((p) => {
-      const n = !p.see.ok && soon.get(p.hex);
-      if (n) {
-        const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * n.t);
-        return { p, kind: 'soon', brg: n.brg, el: n.el, size: glyphSize(n.arcmin), angle: heading(p, to.lat, to.lon, n.ft, n.brg, n.el), n };
-      }
-      return { p, kind: p.see.ok ? 'visible' : 'faint', brg: p.brg, el: p.el, size: glyphSize(p.see.arcmin), angle: heading(p, p.lat, p.lon, p.ftNow, p.brg, p.el) };
-    });
-    const rank = (a, b) => (b.p.hex === state.selected) - (a.p.hex === state.selected) || byEase(a.p, b.p);
-    const order = drawn.slice().sort(rank);
-    const KIND_ORDER = { faint: 0, soon: 1, visible: 2 };
-    // Back to front: soon under visible, the selected plane on top.
-    drawn.slice().sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || (a.p.hex === state.selected) - (b.p.hex === state.selected))
-      .forEach((m) => {
-        const y = Y(m.el);
-        xsOf(X(m.brg)).forEach((x) => {
-          const mark = svgEl('g', { transform: `translate(${fix(x)} ${fix(y)})`, 'data-hex': m.p.hex, tabindex: -1, style: 'cursor:pointer' });
-          if (m.kind === 'soon') {
-            // A dotted line from where it is now to where it comes into view.
-            const dx = ((m.p.brg - m.brg + 540) % 360 - 180) * scale;
-            planes.append(svgEl('line', { x1: fix(x + dx), y1: fix(Y(m.p.el)), x2: fix(x), y2: fix(y), stroke: 'var(--soon)', 'stroke-width': 1, 'stroke-dasharray': '1 3' }));
-          }
-          mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
-          if (m.p.hex === state.selected) {
-            const ring = m.kind === 'visible' ? 'var(--visible)' : (m.kind === 'soon' ? 'var(--soon)' : muted);
-            mark.append(svgEl('circle', { r: m.size, fill: 'none', stroke: ring, 'stroke-width': 1.5 }));
-          }
-          mark.append(m.kind === 'faint' ? svgEl('circle', { r: 2.5, fill: 'var(--faint)' }) : glyph(m.p, m.size, m.angle, m.kind));
-          planes.append(mark);
-        });
-      });
-
-    // Labels, easiest to spot first and the selected plane before all. A label that would
-    // overlap one already placed is dropped. Soon planes keep their "N MIN" tag.
-    const placed = [];
-    order.forEach((m) => {
-      const isSel = m.p.hex === state.selected;
-      const name = m.p.callsign || m.p.raw.r || m.p.hex.toUpperCase();
-      const nameW = textWidth(name, 13, false, isSel ? 700 : 400);
-      const tag = m.kind === 'soon' ? `${Math.max(1, Math.round(m.n.t / 60))} min` : '';
-      const tagW = tag ? textWidth(tag.toUpperCase(), 12, true, 400, 0.96) : 0;
-      const y = Y(m.el);
-      const half = Math.max(m.size / 2, isSel ? m.size : 0);
-      xsOf(X(m.brg)).forEach((x) => {
-        const blockW = (tag ? tagW + 6 : 0) + nameW;
-        const right = x + half + 6 + blockW <= W - 4;
-        // The tag sits next to the glyph, the callsign beyond it.
-        const tagX = right ? x + half + 6 : x - half - 6 - tagW;
-        const nameX = tag ? (right ? tagX + tagW + 6 : tagX - 6 - nameW) : (right ? x + half + 6 : x - half - 6 - nameW);
-        if (tag) {
-          placed.push({ x: tagX, y: y - 8, w: tagW, h: 14 });
-          planes.append(svgEl('text', { x: fix(tagX), y: fix(y + 4), fill: 'var(--soon)', class: 't-lab', 'pointer-events': 'none' }, tag));
-        }
-        const box = { x: nameX - 2, y: y - 9, w: nameW + 4, h: 16 };
-        if (!isSel && placed.some((b) => overlaps(b, box))) return;
-        placed.push(box);
-        planes.append(svgEl('text', { x: fix(nameX), y: fix(y + 4.5), fill: text, class: isSel ? 't-cs sel' : 't-cs', 'pointer-events': 'none' }, name));
-      });
-    });
-    return { W, X, scale };
-  }
-
-  // On a phone the strip scrolls; bring the selected plane (or north, at first) to the middle.
-  let centred;
-  function centreSelected(view) {
-    if (!matchMedia('(max-width: 639px)').matches || centred === state.selected) return;
-    const p = state.aircraft.find((a) => a.hex === state.selected);
-    if (state.selected && !p) return;
-    const n = p && !p.see.ok && state.next.find((s) => s.p.hex === p.hex);
-    const x = view.X(p ? (n ? n.brg : p.brg) : 0);
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    pano.scrollTo({ left: Math.max(0, x - pano.clientWidth / 2), behavior: reduce || centred === undefined ? 'auto' : 'smooth' });
-    centred = state.selected;
-  }
-
-  function describeSky() {
-    const list = seeable().sort(byEase);
-    const each = list.map((p) => `${nameOf(p)} ${Math.round(p.el)}° up ${compass16(p.brg)}`).join('; ');
-    svg.setAttribute('aria-label', list.length
-      ? `Horizon view. ${list.length} plane${list.length === 1 ? '' : 's'} you can see: ${each}. The list below has every plane.`
-      : 'Horizon view. No planes you can see right now. The list below has every plane.');
-  }
-
-  // The answer, first: where to look, then which plane it is. Before any data, and when there's
-  // nothing to point at, the answer says so in one line (docs/redesign-2026-11.md §5.5).
-  function renderHead() {
-    const head = $('head');
-    const p = state.updatedAt ? state.aircraft.find((a) => a.hex === state.selected) : null;
-    $('more').hidden = !p;
-    head.replaceChildren();
-    const para = (cls) => { const e = document.createElement('p'); e.className = cls; head.append(e); return e; };
-    if (!state.updatedAt) {
-      para('answer').textContent = state.error ? 'Can\'t reach the plane data right now.' : 'Listening for planes…';
-      return;
-    }
-    if (!p) {
-      const air = state.aircraft.filter((a) => !a.onGround).length;
-      para('answer').textContent = air
-        ? `Quiet sky. ${air} plane${air === 1 ? '' : 's'} in range, none high or close enough to see.`
-        : 'No planes in range right now.';
-      return;
-    }
-    const n = !seeable().length && state.next.find((s) => s.p.hex === p.hex);
-    para('answer').textContent = n
-      ? `Nothing to see this second. Next: ${nameOf(n.p)} in ${minutes(n.t)} min, ${Math.round(n.el)}° up ${compass16(n.brg)}.`
-      : answerText(p);
-    const sub = para('sub');
-    sub.textContent = [nameOf(p), typeOf(p), altitudeText(p)].join(' · ');
-    if (p.see.ok) {
-      const g = document.createElement('span');
-      g.className = 'label';
-      g.textContent = grade(p.see);
-      sub.append(' · ', g);
-    }
-  }
-  // Where to look for a plane you can see now, or for one coming into view; otherwise why not.
-  function answerText(p) {
-    if (p.see.ok) return p.el >= 75 ? 'Look straight up' : `Look ${compass16(p.brg)}, ${Math.round(p.el)}° up`;
-    const n = state.next.find((s) => s.p.hex === p.hex);
-    if (n) return `In ${minutes(n.t)} min, look ${compass16(n.brg)}, ${Math.round(n.el)}° up`;
-    return p.see.why;
-  }
-  function altitudeText(p) {
-    if (p.onGround) return 'On the ground';
-    if (p.altFt == null) return 'Altitude unknown';
-    const r = p.raw.baro_rate ?? p.raw.geom_rate;
-    const v = typeof r !== 'number' || Math.abs(r) <= 300 ? '' : (r > 0 ? ', climbing' : ', descending');
-    return `${fmt(p.altFt)} ft${v}`;
-  }
-  const minutes = (t) => Math.max(1, Math.round(t / 60));
-
-  function renderCard() {
-    const card = $('card');
-    const p = state.aircraft.find((a) => a.hex === state.selected);
-    card.replaceChildren();
-    if (!p) return;
-    const mi = p.d / M_PER_MI, slantMi = p.slant / M_PER_MI;
-    const delay = p.slant / SOUND_MS;
-    const moved = p.gs ? (p.gs * 1.15078 * delay / 3600) : 0;
-    const rows = [
-      ['Aircraft', `${typeOf(p)}${p.raw.r ? `, ${p.raw.r}` : ''}`],
-      ['Altitude', motionText(p)],
-      ['Speed', p.gs != null ? `${fmt(p.gs * 1.15078)} mph` : 'Not in feed'],
-      ['Distance', `${mi.toFixed(1)} mi, ${slantMi.toFixed(1)} mi in a straight line`],
-      ['Heard', `${Math.round(p.since)} s ago`],
-    ];
-    if (!p.onGround && slantMi <= 8) {
-      rows.push(['Sound', `${Math.round(delay)} s old when you hear it` + (moved >= 0.1 ? `, so look ${moved.toFixed(1)} mi ahead of it` : '')]);
-    }
-    if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency', p.raw.emergency]);
-    const note = whoNote(p);
-    if (note) rows.push(['Note', note]);
-    const dl = document.createElement('dl');
-    rows.forEach(([k, v]) => {
-      const dt = document.createElement('dt'); dt.className = 'label'; dt.textContent = k;
-      const dd = document.createElement('dd'); dd.textContent = v;
-      dl.append(dt, dd);
-    });
-    const share = document.createElement('button');
-    share.type = 'button';
-    share.textContent = 'Share this plane';
-    share.dataset.focus = 'share';
-    share.addEventListener('click', () => sharePlane(p, share));
-    card.append(dl, share);
-  }
-
-  // A link that opens this page on the same place with this plane picked. "My location" is
-  // never put in a link.
-  async function sharePlane(p, btn) {
-    const url = new URL(location.pathname, location.origin);
-    if (state.obs.id !== 'me' && state.obs.id !== PLACES[0].id) url.searchParams.set('at', state.obs.id);
-    url.searchParams.set('plane', p.hex);
-    try {
-      if (navigator.share) { await navigator.share({ title: nameOf(p), text: `${nameOf(p)}, ${typeOf(p)}. Look up now.`, url: url.href }); return; }
-      await navigator.clipboard.writeText(url.href);
-      btn.textContent = 'Link copied';
-    } catch (err) {
-      if (err.name !== 'AbortError') btn.textContent = 'Couldn\'t share this link';
-    }
-  }
-
-  // Planes you can't see yet that will come into view soon, if each keeps its heading, speed and
-  // climb. Reports where each one first appears.
-  function upcoming() {
-    const out = [];
-    state.aircraft.forEach((p) => {
-      if (p.see.ok || !p.moved || p.since > STALE_S || p.gs < 60) return;
-      const rate = p.raw.baro_rate ?? p.raw.geom_rate;
-      for (let t = 15; t <= NEXT_S; t += 15) {
-        const ft = p.ftNow + (typeof rate === 'number' ? rate * t / 60 : 0);
-        if (ft <= 0) return;
-        const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * t);
-        const { d, brg } = geo(state.obs, to.lat, to.lon);
-        const h = ft * 0.3048, el = elevation(d, h);
-        const slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
-        const see = sight(el, slant, brg, p.raw.category, state.sun);
-        if (see.ok) { out.push({ p, t, el, brg, ft, arcmin: see.arcmin }); return; }
-      }
-    });
-    return out.sort((a, b) => a.t - b.t).slice(0, 3);
-  }
-
-  // "In your sky": the planes you can see, then the ones coming into view, as buttons, so picking
-  // one doesn't need a pointer on the panorama. Both lists are rebuilt every update.
-  function timelineRow(p, kind, { t, el, brg }) {
-    const li = document.createElement('li');
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.dataset.hex = p.hex;
-    b.dataset.focus = `${kind}-${p.hex}`;
-    if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
-    const name = nameOf(p);
-    const g = kind === 'now' ? grade(p.see) : '';
-    b.setAttribute('aria-label', kind === 'now'
-      ? `${name}, visible now, ${Math.round(el)} degrees up, ${compass16(brg)}, ` +
-        (g === 'LIGHTS' ? 'look for its lights' : `${g.toLowerCase()} to spot`)
-      : `${name}, comes into view in ${minutes(t)} minutes, ${Math.round(el)} degrees up, ${compass16(brg)}`);
-    const cell = (cls, text) => { const e = document.createElement('span'); e.className = cls; e.textContent = text; b.append(e); };
-    cell('when', kind === 'now' ? 'NOW' : `${minutes(t)} MIN`);
-    cell('who', name);
-    cell('where', `${Math.round(el)}° ${compass16Short(brg)}`);
-    cell('grade label', g);
-    li.append(b);
-    return li;
-  }
-  function emptyRow(text) {
-    const li = document.createElement('li');
-    li.className = 'label';
-    li.textContent = text;
-    return li;
-  }
-  // Before the first data the timeline says it's waiting, once; if the data never came, it's empty.
-  const emptyRows = (text) => (text && !(state.error && !state.updatedAt) ? [emptyRow(text)] : []);
-  function renderNow() {
-    const ol = $('now');
-    const list = seeable().sort(byEase);
-    ol.replaceChildren(...(list.length
-      ? list.map((p) => timelineRow(p, 'now', { el: p.el, brg: p.brg }))
-      : emptyRows(state.updatedAt ? 'None right now.' : 'Waiting for the first update.')));
-  }
-  function renderNext() {
-    const ol = $('next');
-    ol.replaceChildren(...(state.next.length
-      ? state.next.map((n) => timelineRow(n.p, 'next', n))
-      : emptyRows(state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : '')));
-  }
-
-  // ---------- the sun ----------
-  // Small vector helpers for towardSun().
-  const norm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
-  const mix = (a, b, k) => norm([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]);
-  const wrap = (d) => ((d % 360) + 360) % 360;
-  const azOf = (v) => wrap(deg(Math.atan2(v[0], v[1])));
-
-  // Where the sun is, from NOAA's general solar position equations. Within half a degree of the
-  // ephem library in tests. Ignores refraction, which lifts the sun about half a degree near the horizon.
-  function sunAt(date, lat, lon) {
-    const doy = Math.floor((date - Date.UTC(date.getUTCFullYear(), 0, 1)) / 864e5) + 1;
-    const hr = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
-    const g = 2 * Math.PI / 365 * (doy - 1 + (hr - 12) / 24);
-    const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
-    const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) +
-      0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
-    const ha = rad((hr * 60 + eqt + 4 * lon) / 4 - 180);
-    const phi = rad(lat);
-    const cosZ = Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.cos(ha);
-    const el = 90 - deg(Math.acos(Math.max(-1, Math.min(1, cosZ))));
-    const az = wrap(deg(Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(phi) - Math.tan(decl) * Math.cos(phi))) + 180);
-    return { az, el };
-  }
-
-  // ---------- the Moon and planets ----------
-  // Moon and planets from Paul Schlyter's "How to compute planetary positions" (stjarnhimlen.se),
-  // good to a few arcminutes.
-  const sind = (x) => Math.sin(rad(x)), cosd = (x) => Math.cos(rad(x));
-  const daysJ2000 = (date) => date / 864e5 + 2440587.5 - 2451543.5;   // Schlyter's day 0 is 1999 Dec 31, 0h UT
-  // Local sidereal time in degrees.
-  function siderealDeg(date, lon) {
-    const jd = date / 864e5 + 2440587.5;
-    return wrap(280.46061837 + 360.98564736629 * (jd - 2451545) + lon);
-  }
-  function kepler(M, e) {
-    let E = M + deg(e * sind(M) * (1 + e * cosd(M)));
-    for (let i = 0; i < 8; i++) E -= (E - deg(e * sind(E)) - M) / (1 - e * cosd(E));
-    return E;
-  }
-  // Heliocentric (or for the Moon, geocentric) ecliptic x, y, z from orbital elements.
-  function orbit(N, i, w, a, e, M) {
-    const E = kepler(wrap(M), e);
-    const xv = a * (cosd(E) - e), yv = a * Math.sqrt(1 - e * e) * sind(E);
-    const v = deg(Math.atan2(yv, xv)), r = Math.hypot(xv, yv);
-    return [
-      r * (cosd(N) * cosd(v + w) - sind(N) * sind(v + w) * cosd(i)),
-      r * (sind(N) * cosd(v + w) + cosd(N) * sind(v + w) * cosd(i)),
-      r * sind(v + w) * sind(i),
-    ];
-  }
-  // Usually brightest first, so they get a label when names crowd.
-  const PLANETS = {
-    Venus: (d) => [76.6799 + 2.46590e-5 * d, 3.3946 + 2.75e-8 * d, 54.8910 + 1.38374e-5 * d, 0.723330, 0.006773 - 1.302e-9 * d, 48.0052 + 1.6021302244 * d],
-    Jupiter: (d) => [100.4542 + 2.76854e-5 * d, 1.3030 - 1.557e-7 * d, 273.8777 + 1.64505e-5 * d, 5.20256, 0.048498 + 4.469e-9 * d, 19.8950 + 0.0830853001 * d],
-    Mars: (d) => [49.5574 + 2.11081e-5 * d, 1.8497 - 1.78e-8 * d, 286.5016 + 2.92961e-5 * d, 1.523688, 0.093405 + 2.516e-9 * d, 18.6021 + 0.5240207766 * d],
-    Saturn: (d) => [113.6634 + 2.38980e-5 * d, 2.4886 - 1.081e-7 * d, 339.3939 + 2.97661e-5 * d, 9.55475, 0.055546 - 9.499e-9 * d, 316.9670 + 0.0334442282 * d],
-  };
-  // Ecliptic longitude and latitude to equatorial, then to azimuth and elevation for the observer.
-  function eclToEq(x, y, z, d) {
-    const ecl = 23.4393 - 3.563e-7 * d;
-    return [x, y * cosd(ecl) - z * sind(ecl), y * sind(ecl) + z * cosd(ecl)];
-  }
-  function eqToHorizon(xe, ye, ze, date, lat, lon) {
-    const ra = deg(Math.atan2(ye, xe)), dec = deg(Math.atan2(ze, Math.hypot(xe, ye)));
-    const ha = siderealDeg(date, lon) - ra;
-    const x = cosd(ha) * cosd(dec), y = sind(ha) * cosd(dec), z = sind(dec);
-    const xh = x * sind(lat) - z * cosd(lat), zh = x * cosd(lat) + z * sind(lat);
-    return { az: wrap(deg(Math.atan2(y, xh)) + 180), el: deg(Math.asin(Math.max(-1, Math.min(1, zh)))) };
-  }
-  function sunEcl(d) {
-    const w = 282.9404 + 4.70935e-5 * d, e = 0.016709 - 1.151e-9 * d, M = wrap(356.0470 + 0.9856002585 * d);
-    const E = kepler(M, e);
-    const xv = cosd(E) - e, yv = Math.sqrt(1 - e * e) * sind(E);
-    const lon = deg(Math.atan2(yv, xv)) + w, r = Math.hypot(xv, yv);
-    return { x: r * cosd(lon), y: r * sind(lon), lon: wrap(lon), M };
-  }
-  // Where each planet is in the observer's sky.
-  function planetsAt(date, lat, lon) {
-    const d = daysJ2000(date), sun = sunEcl(d);
-    const Mj = wrap(19.8950 + 0.0830853001 * d), Ms = wrap(316.9670 + 0.0334442282 * d);
-    const out = [];
-    for (const name in PLANETS) {
-      let [x, y, z] = orbit(...PLANETS[name](d));
-      // Jupiter and Saturn pull on each other enough to matter.
-      if (name === 'Jupiter' || name === 'Saturn') {
-        const r = Math.hypot(x, y, z);
-        let lo = deg(Math.atan2(y, x)), la = deg(Math.asin(z / r));
-        if (name === 'Jupiter') {
-          lo += -0.332 * sind(2 * Mj - 5 * Ms - 67.6) - 0.056 * sind(2 * Mj - 2 * Ms + 21) + 0.042 * sind(3 * Mj - 5 * Ms + 21) -
-            0.036 * sind(Mj - 2 * Ms) + 0.022 * cosd(Mj - Ms) + 0.023 * sind(2 * Mj - 3 * Ms + 52) - 0.016 * sind(Mj - 5 * Ms - 69);
-        } else {
-          lo += 0.812 * sind(2 * Mj - 5 * Ms - 67.6) - 0.229 * cosd(2 * Mj - 4 * Ms - 2) + 0.119 * sind(Mj - 2 * Ms - 3) +
-            0.046 * sind(2 * Mj - 6 * Ms - 69) + 0.014 * sind(Mj - 3 * Ms + 32);
-          la += -0.020 * cosd(2 * Mj - 4 * Ms - 2) + 0.018 * sind(2 * Mj - 6 * Ms - 49);
-        }
-        x = r * cosd(la) * cosd(lo); y = r * cosd(la) * sind(lo); z = r * sind(la);
-      }
-      const [xe, ye, ze] = eclToEq(x + sun.x, y + sun.y, z, d);
-      out.push({ name, ...eqToHorizon(xe, ye, ze, date, lat, lon) });
-    }
-    return out;
-  }
-  // The Moon from the observer's spot (it's close enough that this shifts it up to a degree),
-  // and how much of it is lit.
-  function moonAt(date, lat, lon) {
-    const d = daysJ2000(date), sun = sunEcl(d);
-    const N = 125.1228 - 0.0529538083 * d, w = 318.0634 + 0.1643573223 * d, M = wrap(115.3654 + 13.0649929509 * d);
-    const [x0, y0, z0] = orbit(N, 5.1454, w, 60.2666, 0.054900, M);
-    const Ms = sun.M, Ls = Ms + 282.9404 + 4.70935e-5 * d, Lm = M + w + N, D = Lm - Ls, F = Lm - N;
-    let r = Math.hypot(x0, y0, z0), lo = deg(Math.atan2(y0, x0)), la = deg(Math.asin(z0 / r));
-    lo += -1.274 * sind(M - 2 * D) + 0.658 * sind(2 * D) - 0.186 * sind(Ms) - 0.059 * sind(2 * M - 2 * D) -
-      0.057 * sind(M - 2 * D + Ms) + 0.053 * sind(M + 2 * D) + 0.046 * sind(2 * D - Ms) + 0.041 * sind(M - Ms) -
-      0.035 * sind(D) - 0.031 * sind(M + Ms) - 0.015 * sind(2 * F - 2 * D) + 0.011 * sind(M - 4 * D);
-    la += -0.173 * sind(F - 2 * D) - 0.055 * sind(M - F - 2 * D) - 0.046 * sind(M + F - 2 * D) + 0.033 * sind(F + 2 * D) + 0.017 * sind(2 * M + F);
-    r += -0.58 * cosd(M - 2 * D) - 0.46 * cosd(2 * D);
-    const [xe, ye, ze] = eclToEq(r * cosd(la) * cosd(lo), r * cosd(la) * sind(lo), r * sind(la), d);
-    // Move from the Earth's center to the observer, in Earth radii.
-    const lst = siderealDeg(date, lon);
-    const ox = cosd(lat) * cosd(lst), oy = cosd(lat) * sind(lst), oz = sind(lat);
-    const sky = eqToHorizon(xe - ox, ye - oy, ze - oz, date, lat, lon);
-    const elong = Math.acos(cosd(la) * cosd(lo - sun.lon));
-    return { name: 'Moon', ...sky, lit: (1 - Math.cos(elong)) / 2 };
-  }
-
-  // Can you see it with your eyes? Empty means yes; otherwise, why not. Estimates, like the
-  // plane cutoffs.
-  function bodyWhy(b, sun) {
-    if (b.el < 0) return 'Below the horizon.';
-    if (b.el < MIN_EL) return `Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`;
-    if (b.kind === 'moon') {
-      return sun.el > 0 && (b.lit < 0.1 || apart(b.az, b.el, sun.az, sun.el) < SUN_CLEAR) ? 'Too thin to pick out in daylight.' : '';
-    }
-    // Venus shows in twilight; the other planets need a dark sky.
-    return sun.el > (b.name === 'Venus' ? 0 : -6) ? 'The sky is too bright.' : '';
-  }
-  // The Moon and planets at a moment, each with a yes or no for the eye.
-  function skyBodies(date) {
-    const { lat, lon } = state.obs;
-    const sun = sunAt(date, lat, lon);
-    const list = [{ kind: 'moon', ...moonAt(date, lat, lon) }]
-      .concat(planetsAt(date, lat, lon).map((p) => ({ kind: 'planet', ...p })));
-    list.forEach((b) => { b.why = bodyWhy(b, sun); b.ok = !b.why; });
-    return list;
-  }
-  // A little way from a body toward the sun, so a lit side can face the right way.
-  function towardSun(b, sun) {
-    const v = (az, el) => [cosd(el) * sind(az), cosd(el) * cosd(az), sind(el)];
-    const p = mix(v(b.az, b.el), v(sun.az, sun.el), 0.02);
-    return { az: azOf(p), el: deg(Math.asin(p[2])) };
-  }
-  // The Moon as it looks: the lit part white, the dark part gray, the lit side toward the sun.
-  function moonGlyph(x, y, r, angle, lit, stroke) {
-    const m = svgEl('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` });
-    m.append(svgEl('circle', { r, fill: 'var(--muted)' }));
-    const rx = (r * Math.abs(1 - 2 * lit)).toFixed(2);
-    m.append(svgEl('path', {
-      d: `M0,${-r} A${r},${r} 0 0 1 0,${r} A${rx},${r} 0 0 ${lit < 0.5 ? 0 : 1} 0,${-r} Z`,
-      fill: 'var(--text)', transform: `rotate(${(angle - 90).toFixed(0)})`,
-    }));
-    m.append(svgEl('circle', { r, fill: 'none', stroke, 'stroke-width': 2 }));
-    return m;
-  }
-
-  function setText(el, s) { if (el.textContent !== s) el.textContent = s; }
-
-  // ---------- interaction ----------
-  function select(hex) {
-    state.selected = hex;
-    state.picked = true;
-    state.notice = '';
-    render();
-  }
-  svg.addEventListener('click', (e) => {
-    const g = e.target.closest('[data-hex]');
-    if (g) select(g.getAttribute('data-hex'));
-  });
-  ['now', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-hex]');
-    // Bring the answer into view, then select: render() centres the panorama on the plane.
-    if (b) { $('title').scrollIntoView({ block: 'start' }); select(b.dataset.hex); }
-  }));
-
-  const placeSel = $('place');
-  PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));
-  placeSel.append(new Option('My location', 'me'));
-  placeSel.addEventListener('change', () => {
-    state.wanted = null;
-    if (placeSel.value !== 'me') { setObserver(PLACES.find((p) => p.id === placeSel.value)); return; }
-    const back = () => { placeSel.value = state.obs.id; };
-    if (!navigator.geolocation) { back(); setText($('status'), 'This browser can\'t share a location.'); return; }
-    setText($('status'), 'Finding you. Rounded to about 1 km before it leaves your phone.');
-    navigator.geolocation.getCurrentPosition((pos) => {
-      setObserver({ id: 'me', label: 'My location', title: 'where you are', lat: pos.coords.latitude, lon: pos.coords.longitude });
-    }, (err) => {
-      back();
-      setText($('status'), `Couldn't get your location (${err.message}).`);
-    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
-  });
-  function setObserver(obs) {
-    state.obs = obs;
-    state.selected = null;
-    state.picked = false;
-    state.notice = '';
-    // Keep the address shareable: listed places go in it, "My location" never does.
-    const url = new URL(location.pathname, location.origin);
-    if (obs.id !== 'me' && obs.id !== PLACES[0].id) url.searchParams.set('at', obs.id);
-    history.replaceState(null, '', url);
-    state.aircraft = [];
-    state.updatedAt = null;
+  const req = inflight = { obs, ctrl: new AbortController() };
+  // Only a rounded location (about 1 km) leaves the browser.
+  const url = `/api/aircraft?lat=${obs.lat.toFixed(2)}&lon=${obs.lon.toFixed(2)}&nm=${NM}`;
+  try {
+    const r = await fetch(url, { cache: 'no-store', signal: req.ctrl.signal });
+    const j = await r.json().catch(() => ({}));
+    if (req !== inflight) return;
+    if (!r.ok) throw new Error(j.error || `status ${r.status}`);
+    if (!Array.isArray(j.ac)) throw new Error('unexpected answer');
+    const fetchedAt = Date.now();
+    const withPos = (j.ac || []).filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number');
+    state.aircraft = withPos.map((a) => enrich(a, j.now || fetchedAt, fetchedAt));
+    state.updatedAt = new Date(fetchedAt);
     state.error = '';
-    document.title = obs.id === 'me' ? 'Sky over you' : `Sky over ${obs.title}`;
-    render();
-    schedule();
+  } catch (e) {
+    if (req === inflight) state.error = e.message || 'unknown error';
+  } finally {
+    // A cancelled request has already been replaced; only the current one renders.
+    if (req === inflight) { inflight = null; state.heard = true; render(); }
+  }
+}
+
+let timer = null;
+function schedule() {
+  clearInterval(timer);
+  if (document.visibilityState === 'visible') {
+    load();
+    timer = setInterval(load, REFRESH_MS);
+  }
+}
+
+// ---------- naming ----------
+function nameOf(p) {
+  const cs = p.callsign;
+  const m = cs.match(/^([A-Z]{3})(\d[0-9A-Z]*)$/);
+  if (m && AIRLINES[m[1]]) return `${AIRLINES[m[1]]} ${m[2]}`;
+  return cs || p.raw.r || p.hex.toUpperCase();
+}
+function typeOf(p) {
+  const cat = p.raw.category;
+  if (cat === 'C1' || cat === 'C2') return 'Airport ground vehicle';
+  const t = p.raw.t;
+  if (t && TYPES[t]) return TYPES[t];
+  if (t) return `Type code ${t}`;
+  if (cat === 'A7') return 'Helicopter, model not in feed';
+  return 'Type not in feed';
+}
+function whoNote(p) {
+  if (/^N\d/.test(p.callsign)) return 'Flying under its US registration, typical of private flights.';
+  if (!p.raw.r && !p.raw.t) return 'No registration. Maybe an FAA privacy address.';
+  return '';
+}
+function motionText(p) {
+  const r = p.raw.baro_rate ?? p.raw.geom_rate;
+  if (p.onGround) return p.gs ? `Moving at ${fmt(p.gs)} knots on the ground.` : 'Stopped.';
+  let v = 'level';
+  if (typeof r === 'number' && r > 300) v = `climbing ${fmt(r)} ft per minute`;
+  if (typeof r === 'number' && r < -300) v = `descending ${fmt(-r)} ft per minute`;
+  const dir = p.track != null ? `, heading ${compassWord(p.track)}` : '';
+  return `${p.altFt != null ? fmt(p.altFt) + ' ft' : 'Altitude unknown'}, ${v}${dir}.`;
+}
+
+// ---------- rendering ----------
+const seeable = () => state.aircraft.filter((p) => p.see.ok);
+
+function render() {
+  // Lists and the card are rebuilt; put keyboard focus back.
+  const focusKey = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.focus : null;
+  updatePositions(Date.now());
+  state.sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
+  document.documentElement.dataset.theme = (matchMedia('(prefers-color-scheme: dark)').matches || state.sun.el < -6) ? 'dark' : 'light';
+  state.aircraft.forEach((p) => { p.see = judge(p); });
+  state.next = upcoming();
+  // Pick a plane named in a shared link once data arrives.
+  if (state.wanted && state.updatedAt) {
+    if (state.aircraft.some((a) => a.hex === state.wanted)) { state.selected = state.wanted; state.picked = true; }
+    else state.notice = 'The plane in that link has left the area.';
+    state.wanted = null;
+  }
+  // Until the reader picks one, show the easiest plane, or else the next one coming.
+  const pool = seeable().sort(byEase);
+  const gone = !state.aircraft.some((a) => a.hex === state.selected);
+  const stale = !state.picked && pool.length && !pool.some((a) => a.hex === state.selected);
+  if (!state.selected || gone || stale) {
+    state.selected = pool[0] ? pool[0].hex : (state.next[0] ? state.next[0].p.hex : null);
+    state.picked = false;
+  }
+  renderStatus();
+  buildChart();
+  describeSky();
+  renderHead();
+  renderCard();
+  renderNow();
+  renderNext();
+  centreSelected();
+  if (focusKey && !document.activeElement.dataset.focus) {
+    const again = document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);
+    if (again) again.focus({ preventScroll: true });
+  }
+}
+
+function renderStatus() {
+  const el = $('status'), title = $('title');
+  const air = state.aircraft.filter((p) => !p.onGround).length;
+  const n = seeable().length;
+  if (state.updatedAt) {
+    setText(title, `${n || 'No'} plane${n === 1 ? '' : 's'} you can see from ${state.obs.title}`);
+  } else setText(title, `Planes you can see from ${state.obs.title}`);
+  const cls = (c) => { if (el.className !== c) el.className = c; };
+  if (state.error) {
+    cls('status error');
+    setText(el, `No answer from the data source (${state.error}). Retrying every ${REFRESH_MS / 1000} s.`);
+    return;
+  }
+  if (!state.updatedAt) {
+    // Connecting at first; finding planes after a place change.
+    cls('status');
+    setText(el, state.heard ? 'Finding planes.' : 'Connecting to adsb.lol');
+    return;
+  }
+  cls('status live');
+  setText(el, `Live · ${n} of ${air} planes within ${Math.round(NM * 1852 / M_PER_MI)} miles` +
+    (state.notice ? `. ${state.notice}` : ''));
+}
+
+// An HTML element with a class and text.
+function make(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function svgEl(tag, attrs, text) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+// Label widths, measured on a canvas (no layout), cached by plane and callsign. Only buildChart() measures.
+const widths = new Map();
+const measurer = document.createElement('canvas').getContext('2d');
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => widths.clear());
+function textWidth(s, size, data, weight = 400, spacing = 0, id = '') {
+  const key = `${id}|${s}|${size}|${data}|${weight}`;
+  if (!widths.has(key)) {
+    const family = getComputedStyle(document.documentElement).getPropertyValue(data ? '--font-data' : '--font-text');
+    measurer.font = `${weight} ${size}px ${family || 'sans-serif'}`;
+    widths.set(key, measurer.measureText(s).width + spacing * s.length);
+  }
+  return widths.get(key);
+}
+const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+const fix = (n) => n.toFixed(1);
+// Signed bearing difference, -180..180, so crossing south doesn't jump.
+const turn = (d) => (d % 360 + 540) % 360 - 180;
+// CSS transforms animate; the SVG transform attribute doesn't.
+const place = (x, y, a = 0) => `translate(${fix(x)}px, ${fix(y)}px) rotate(${a.toFixed(0)}deg)`;
+// Screen angle (0 = up, clockwise) from one sky point to another.
+const screenAngle = (v, b1, e1, b2, e2) => deg(Math.atan2(turn(b2 - b1) * v.scale, v.Y(e1) - v.Y(e2)));
+// Which way a plane appears to move: from where it is to where it is 30 s on.
+function heading(v, p, lat, lon, ft, brg, el) {
+  if (p.track == null) return 0;
+  const ahead = project(lat, lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
+  const q = geo(state.obs, ahead.lat, ahead.lon);
+  return screenAngle(v, brg, el, q.brg, elevation(q.d, ft * 0.3048));
+}
+
+// The horizon panorama (docs/redesign-2026-11.md §5.3). buildChart() makes every node, on
+// render(), resize and selection; moveChart() only moves them, each second.
+let view = null;    // { W, X, Y, scale, marks }: marks are the moving nodes and where they were drawn
+let ringFor;        // the plane whose selection ring has already faded in
+function buildChart() {
+  const mobile = matchMedia('(max-width: 639px)').matches;
+  const W = mobile ? 864 + 2 * 48 : Math.max(300, Math.round(pano.clientWidth) || 960);
+  const H = mobile ? 280 : 360;
+  const top = 24, bottom = H - 40;
+  const scale = mobile ? 2.4 : W / 360;   // px per degree of bearing
+  const period = 360 * scale;
+  const X = (b) => panoX(b, W, mobile);
+  const Y = (el) => panoY(el, top, bottom);
+  const v = view = { W, X, Y, scale, marks: [] };
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  const crisp = (y) => Math.round(y) + 0.5;
+  // Every x a point is drawn at: near S it is drawn again one turn away, so it's never cut in half.
+  const xsOf = (x) => {
+    const out = [x];
+    const lo = mobile ? 0 : -24, hi = mobile ? W : W + 24;
+    for (const c of [x - period, x + period]) if (c >= lo && c <= hi) out.push(c);
+    return out;
+  };
+  const line = 'var(--line)', muted = 'var(--muted)', text = 'var(--text)';
+  const g = svgEl('g', {});
+  svg.append(g);
+
+  // The 0–10° band, mostly behind trees and roofs.
+  g.append(svgEl('rect', { x: 0, y: fix(Y(10)), width: W, height: fix(bottom - Y(10)), fill: 'var(--below)' }));
+  [[10, '10° · tree line'], [30, '30°'], [60, '60°']].forEach(([e, label]) => {
+    const y = crisp(Y(e));
+    g.append(svgEl('line', { x1: 0, y1: y, x2: W, y2: y, stroke: line, ...(e === 10 ? { 'stroke-dasharray': '2 4' } : {}) }));
+    g.append(svgEl('text', { x: 4, y: fix(Y(e) - 6), fill: muted, class: 't-lab' }, label));
+  });
+  g.append(svgEl('text', { x: 4, y: top - 8, fill: muted, class: 't-lab' }, 'overhead'));   // uppercased by CSS
+  g.append(svgEl('line', { x1: 0, y1: crisp(bottom), x2: W, y2: crisp(bottom), stroke: muted }));
+  // No data ever: the grid alone.
+  fadeStale();
+  if (state.error && !state.updatedAt) return;
+
+  // Compass ribbon: a tick every 15°, a longer one and a letter every 45°.
+  for (let b = 0; b < 360; b += 15) {
+    const major = b % 45 === 0;
+    xsOf(X(b)).forEach((x) => {
+      g.append(svgEl('line', { x1: fix(x), y1: bottom, x2: fix(x), y2: bottom + (major ? 10 : 5), stroke: muted }));
+      if (!major) return;
+      const letter = compassShort(b);
+      // Keep the S at each edge inside the picture.
+      const anchor = x < 8 ? 'start' : (x > W - 8 ? 'end' : 'middle');
+      g.append(svgEl('text', {
+        x: anchor === 'start' ? 2 : (anchor === 'end' ? W - 2 : fix(x)), y: bottom + 26,
+        fill: letter === 'N' ? text : muted, 'text-anchor': anchor, class: 't-cmp',
+      }, letter));
+    });
   }
 
-  document.addEventListener('visibilitychange', schedule);
+  // Landmarks, to face the right way without a compass.
+  const marks = [];
+  LANDMARKS.forEach(([name, lat, lon]) => {
+    const { d, brg } = geo(state.obs, lat, lon);
+    if (d < 1000) return;   // standing on it
+    const w = textWidth(name, 11, false);
+    xsOf(X(brg)).forEach((x) => {
+      const box = { x: x - w / 2 - 2, y: bottom - 17, w: w + 4, h: 13 };
+      if (box.x < 0 || box.x + box.w > W || marks.some((m) => overlaps(m, box))) return;
+      marks.push(box);
+      g.append(svgEl('text', { x: fix(x), y: bottom - 6, fill: muted, 'text-anchor': 'middle' }, name));
+    });
+  });
 
-  // Between updates, move the planes along every second.
-  setInterval(() => {
-    if (document.visibilityState === 'visible' && state.aircraft.length) {
-      updatePositions(Date.now());
-      renderChart();
+  // The sun and its glare zone: planes inside the dashed circle aren't counted.
+  if (state.sun.el > 0) {
+    const y = Y(state.sun.el);
+    xsOf(X(state.sun.az)).forEach((x) => {
+      g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: fix(SUN_CLEAR * scale), fill: 'none', stroke: 'var(--sun)', 'stroke-dasharray': '3 3', opacity: 0.4 }));
+      g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: 8, fill: 'var(--sun)' }));
+    });
+  }
+
+  // The Moon and the planets you can see; Venus and Jupiter are often taken for planes.
+  skyBodies(new Date()).filter((b) => b.ok).forEach((b) => {
+    const y = Y(b.el);
+    xsOf(X(b.az)).forEach((x) => {
+      if (b.kind === 'moon') {
+        const t = towardSun(b, state.sun);
+        g.append(moonGlyph(x, y, 9, screenAngle(v, b.az, b.el, t.az, t.el), b.lit, muted));
+        return;
+      }
+      g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: 3, fill: text }));
+      g.append(svgEl('text', { x: fix(x + 6), y: fix(y + 4), fill: muted }, b.name));
+    });
+  });
+
+  // Planes share one layer, so stale data fades them without the frame. v.marks keeps each
+  // moving node and where it was drawn.
+  const planes = svgEl('g', { class: 'planes' });
+  g.append(planes);
+  const add = (el, p, kind, x, y, brg, a) => {
+    el.style.transform = place(x, y, a);
+    planes.append(el);
+    const m = { el, p, kind, x, y, brg, labels: [] };
+    v.marks.push(m);
+    return m;
+  };
+  const soon = new Map(state.next.map((n) => [n.p.hex, n]));
+  const air = state.aircraft.filter((p) => !p.onGround);
+  // Faint dots for planes you can't see: the 80 nearest.
+  air.filter((p) => !p.see.ok && !soon.has(p.hex) && p.hex !== state.selected).sort((a, b) => a.d - b.d).slice(0, 80).forEach((p) => {
+    xsOf(X(p.brg)).forEach((x) => add(svgEl('circle', { r: 2.5, fill: 'var(--faint)', class: 'dot' }), p, 'dot', x, Y(p.el), p.brg));
+  });
+
+  // Planes drawn with a mark. Soon planes sit where they come into view.
+  const drawn = air.filter((p) => p.see.ok || soon.has(p.hex) || p.hex === state.selected).map((p) => {
+    const n = !p.see.ok && soon.get(p.hex);
+    if (n) {
+      const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * n.t);
+      return { p, kind: 'soon', brg: n.brg, el: n.el, size: glyphSize(n.arcmin), angle: heading(v, p, to.lat, to.lon, n.ft, n.brg, n.el), n };
     }
-  }, 1000);
+    return { p, kind: p.see.ok ? 'visible' : 'faint', brg: p.brg, el: p.el, size: glyphSize(p.see.arcmin), angle: heading(v, p, p.lat, p.lon, p.ftNow, p.brg, p.el) };
+  });
+  const isSel = (m) => m.p.hex === state.selected;
+  const KIND_ORDER = { faint: 0, soon: 1, visible: 2 };
+  const copies = new Map();   // hex -> its marks, one per copy, in xsOf order
+  const rings = [];
+  // Back to front: soon under visible, the selected plane on top.
+  drawn.slice().sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || isSel(a) - isSel(b)).forEach((m) => {
+    const y = Y(m.el);
+    copies.set(m.p.hex, xsOf(X(m.brg)).map((x) => {
+      let path = null;
+      if (m.kind === 'soon') {
+        // A dotted line from where it is now to where it comes into view.
+        path = svgEl('line', { x1: fix(x + turn(m.p.brg - m.brg) * scale), y1: fix(Y(m.p.el)), x2: fix(x), y2: fix(y), stroke: 'var(--soon)', 'stroke-dasharray': '1 3' });
+        planes.append(path);
+      }
+      const mark = svgEl('g', { 'data-hex': m.p.hex, tabindex: -1 });
+      mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
+      if (isSel(m)) {
+        const ring = svgEl('circle', { r: m.size, fill: 'none', stroke: m.kind === 'faint' ? muted : `var(--${m.kind})`, 'stroke-width': 1.5, class: 'ring' });
+        if (ringFor !== state.selected) { ring.style.opacity = 0; rings.push(ring); }
+        mark.append(ring);
+      }
+      mark.append(m.kind === 'faint' ? svgEl('circle', { r: 2.5, fill: 'var(--faint)' }) : svgEl('path', {
+        d: SHAPES[m.p.raw.category] || SHAPES.default,
+        transform: `scale(${(m.size / 24).toFixed(3)}) translate(-12 -12)`,
+        ...(m.kind === 'soon'
+          ? { fill: 'none', stroke: 'var(--soon)', 'stroke-dasharray': '2 2', 'vector-effect': 'non-scaling-stroke', 'stroke-width': 1.5 }
+          : { fill: 'var(--visible)' }),
+      }));
+      return Object.assign(add(mark, m.p, m.kind, x, y, m.brg, m.angle), { path });
+    }));
+  });
+  // The new selection ring fades in, once (§4.4).
+  rings.forEach((r) => { getComputedStyle(r).opacity; r.style.opacity = 1; });
+  ringFor = state.selected;
 
-  let resizeTimer = 0;
-  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 150); });
+  // Labels, selected then easiest first; one that overlaps a placed label is dropped.
+  const placed = [];
+  drawn.sort((a, b) => isSel(b) - isSel(a) || byEase(a.p, b.p)).forEach((m) => {
+    const sel = isSel(m);
+    const name = m.p.callsign || m.p.raw.r || m.p.hex.toUpperCase();
+    const nameW = textWidth(name, 13, false, sel ? 700 : 400, 0, m.p.hex);
+    const tag = m.kind === 'soon' ? `${minutes(m.n.t)} min` : '';
+    const tagW = tag ? textWidth(tag.toUpperCase(), 12, true, 400, 0.96) : 0;
+    const y = Y(m.el);
+    const half = Math.max(m.size / 2, sel ? m.size : 0);
+    xsOf(X(m.brg)).forEach((x, i) => {
+      const own = copies.get(m.p.hex)[i].labels;
+      const blockW = (tag ? tagW + 6 : 0) + nameW;
+      const right = x + half + 6 + blockW <= W - 4;
+      // The tag sits next to the glyph, the callsign beyond it.
+      const tagX = right ? x + half + 6 : x - half - 6 - tagW;
+      const nameX = tag ? (right ? tagX + tagW + 6 : tagX - 6 - nameW) : (right ? x + half + 6 : x - half - 6 - nameW);
+      const label = (lx, ly, attrs, s) => { const t = svgEl('text', { x: fix(lx), y: fix(ly), 'pointer-events': 'none', ...attrs }, s); planes.append(t); own.push(t); };
+      if (tag) {
+        placed.push({ x: tagX, y: y - 8, w: tagW, h: 14 });
+        label(tagX, y + 4, { fill: 'var(--soon)', class: 't-lab' }, tag);
+      }
+      const box = { x: nameX - 2, y: y - 9, w: nameW + 4, h: 16 };
+      if (!sel && placed.some((b) => overlaps(b, box))) return;
+      placed.push(box);
+      label(nameX, y + 4.5, { fill: text, class: sel ? 't-cs sel' : 't-cs' }, name);
+    });
+  });
+}
 
-  // Links can name a listed place (?at=KSFO) and a plane (?plane=a1b2c3).
-  const params = new URLSearchParams(location.search);
-  const linkedPlane = (params.get('plane') || '').toLowerCase();
-  if (/^~?[0-9a-f]{6}$/.test(linkedPlane)) state.wanted = linkedPlane;
-  const linkedPlace = PLACES.find((p) => p.id.toLowerCase() === (params.get('at') || '').toLowerCase());
-  if (linkedPlace) placeSel.value = linkedPlace.id;
-  setObserver(linkedPlace || PLACES[0]);
+// After 30 s without fresh data the planes fade; the frame stays.
+const fadeStale = () => pano.classList.toggle('stale', !!(state.error && state.updatedAt && Date.now() - state.updatedAt > 30000));
+
+// The 1 s tick: transforms and line ends only; no new nodes, no measuring. A soon plane waits
+// at its entry point while its line follows the plane.
+function moveChart() {
+  if (!view) return;
+  fadeStale();
+  const { Y, scale } = view;
+  view.marks.forEach((m) => {
+    const p = m.p, dx = turn(p.brg - m.brg) * scale;
+    if (m.kind === 'soon') {
+      if (m.path) { m.path.setAttribute('x1', fix(m.x + dx)); m.path.setAttribute('y1', fix(Y(p.el))); }
+      return;
+    }
+    const dy = Y(p.el) - m.y;
+    m.el.style.transform = place(m.x + dx, m.y + dy, m.kind === 'dot' ? 0 : heading(view, p, p.lat, p.lon, p.ftNow, p.brg, p.el));
+    m.labels.forEach((t) => { t.style.transform = place(dx, dy); });
+  });
+}
+
+// On a phone the strip scrolls; bring the selected plane (or north, at first) to the middle.
+let centred;
+function centreSelected() {
+  if (!matchMedia('(max-width: 639px)').matches || centred === state.selected) return;
+  const p = state.aircraft.find((a) => a.hex === state.selected);
+  if (state.selected && !p) return;
+  const n = p && !p.see.ok && state.next.find((s) => s.p.hex === p.hex);
+  const x = view.X(p ? (n ? n.brg : p.brg) : 0);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  pano.scrollTo({ left: Math.max(0, x - pano.clientWidth / 2), behavior: reduce || centred === undefined ? 'auto' : 'smooth' });
+  centred = state.selected;
+}
+
+function describeSky() {
+  const list = seeable().sort(byEase);
+  const each = list.map((p) => `${nameOf(p)} ${Math.round(p.el)}° up ${compass16(p.brg)}`).join('; ');
+  svg.setAttribute('aria-label', list.length
+    ? `Horizon view. ${list.length} plane${list.length === 1 ? '' : 's'} you can see: ${each}. The list below has every plane.`
+    : 'Horizon view. No planes you can see right now. The list below has every plane.');
+}
+
+// The answer: where to look, then which plane it is; otherwise one line on why not (§5.5).
+function renderHead() {
+  const head = $('head');
+  const p = state.updatedAt ? state.aircraft.find((a) => a.hex === state.selected) : null;
+  $('more').hidden = !p;
+  head.replaceChildren();
+  const para = (cls, text) => head.appendChild(make('p', cls, text));
+  if (!state.updatedAt) {
+    para('answer', state.error ? 'Can\'t reach the plane data right now.' : 'Listening for planes…');
+    return;
+  }
+  if (!p) {
+    const air = state.aircraft.filter((a) => !a.onGround).length;
+    para('answer', air
+      ? `Quiet sky. ${air} plane${air === 1 ? '' : 's'} in range, none high or close enough to see.`
+      : 'No planes in range right now.');
+    return;
+  }
+  const n = !seeable().length && state.next.find((s) => s.p.hex === p.hex);
+  para('answer', n
+    ? `Nothing to see this second. Next: ${nameOf(n.p)} in ${minutes(n.t)} min, ${Math.round(n.el)}° up ${compass16(n.brg)}.`
+    : answerText(p));
+  const sub = para('sub', [nameOf(p), typeOf(p), altitudeText(p)].join(' · '));
+  if (p.see.ok) sub.append(' · ', make('span', 'label', grade(p.see)));
+}
+// Where to look for a plane you can see now, or for one coming into view; otherwise why not.
+function answerText(p) {
+  if (p.see.ok) return p.el >= 75 ? 'Look straight up' : `Look ${compass16(p.brg)}, ${Math.round(p.el)}° up`;
+  const n = state.next.find((s) => s.p.hex === p.hex);
+  if (n) return `In ${minutes(n.t)} min, look ${compass16(n.brg)}, ${Math.round(n.el)}° up`;
+  return p.see.why;
+}
+function altitudeText(p) {
+  if (p.onGround) return 'On the ground';
+  if (p.altFt == null) return 'Altitude unknown';
+  const r = p.raw.baro_rate ?? p.raw.geom_rate;
+  const v = typeof r !== 'number' || Math.abs(r) <= 300 ? '' : (r > 0 ? ', climbing' : ', descending');
+  return `${fmt(p.altFt)} ft${v}`;
+}
+const minutes = (t) => Math.max(1, Math.round(t / 60));
+
+function renderCard() {
+  const card = $('card');
+  const p = state.aircraft.find((a) => a.hex === state.selected);
+  card.replaceChildren();
+  if (!p) return;
+  const mi = p.d / M_PER_MI, slantMi = p.slant / M_PER_MI;
+  const delay = p.slant / SOUND_MS;
+  const moved = p.gs ? (p.gs * 1.15078 * delay / 3600) : 0;
+  const rows = [
+    ['Aircraft', `${typeOf(p)}${p.raw.r ? `, ${p.raw.r}` : ''}`],
+    ['Altitude', motionText(p)],
+    ['Speed', p.gs != null ? `${fmt(p.gs * 1.15078)} mph` : 'Not in feed'],
+    ['Distance', `${mi.toFixed(1)} mi, ${slantMi.toFixed(1)} mi in a straight line`],
+    ['Heard', `${Math.round(p.since)} s ago`],
+  ];
+  if (!p.onGround && slantMi <= 8) {
+    rows.push(['Sound', `${Math.round(delay)} s old when you hear it` + (moved >= 0.1 ? `, so look ${moved.toFixed(1)} mi ahead of it` : '')]);
+  }
+  if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency', p.raw.emergency]);
+  const note = whoNote(p);
+  if (note) rows.push(['Note', note]);
+  const dl = make('dl');
+  rows.forEach(([k, v]) => dl.append(make('dt', 'label', k), make('dd', '', v)));
+  const share = make('button', '', 'Share this plane');
+  share.type = 'button';
+  share.dataset.focus = 'share';
+  share.addEventListener('click', () => sharePlane(p, share));
+  card.append(dl, share);
+}
+
+// This page's address for a place: listed places go in it, the default and "My location" don't.
+function placeURL(obs) {
+  const url = new URL(location.pathname, location.origin);
+  if (obs.id !== 'me' && obs.id !== PLACES[0].id) url.searchParams.set('at', obs.id);
+  return url;
+}
+// A link to this place with this plane picked. "My location" never goes in a link.
+async function sharePlane(p, btn) {
+  const url = placeURL(state.obs);
+  url.searchParams.set('plane', p.hex);
+  try {
+    if (navigator.share) { await navigator.share({ title: nameOf(p), text: `${nameOf(p)}, ${typeOf(p)}. Look up now.`, url: url.href }); return; }
+    await navigator.clipboard.writeText(url.href);
+    btn.textContent = 'Link copied';
+  } catch (err) {
+    if (err.name !== 'AbortError') btn.textContent = 'Couldn\'t share this link';
+  }
+}
+
+// Planes that come into view soon if each flies on as it is, and where each first appears.
+function upcoming() {
+  const out = [];
+  state.aircraft.forEach((p) => {
+    if (p.see.ok || !p.moved || p.since > STALE_S || p.gs < 60) return;
+    const rate = p.raw.baro_rate ?? p.raw.geom_rate;
+    for (let t = 15; t <= NEXT_S; t += 15) {
+      const ft = p.ftNow + (typeof rate === 'number' ? rate * t / 60 : 0);
+      if (ft <= 0) return;
+      const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * t);
+      const { d, brg } = geo(state.obs, to.lat, to.lon);
+      const h = ft * 0.3048, el = elevation(d, h);
+      const slant = Math.hypot(d, h - d * d / (2 * EARTH_M));
+      const see = sight(el, slant, brg, p.raw.category, state.sun);
+      if (see.ok) { out.push({ p, t, el, brg, ft, arcmin: see.arcmin }); return; }
+    }
+  });
+  return out.sort((a, b) => a.t - b.t).slice(0, 3);
+}
+
+// "In your sky": visible, then soon planes, as buttons, so picking one needs no pointer.
+function timelineRow(p, kind, { t, el, brg }) {
+  const li = make('li');
+  const b = make('button');
+  b.type = 'button';
+  b.dataset.hex = p.hex;
+  b.dataset.focus = `${kind}-${p.hex}`;
+  if (p.hex === state.selected) b.setAttribute('aria-current', 'true');
+  const name = nameOf(p);
+  const g = kind === 'now' ? grade(p.see) : '';
+  b.setAttribute('aria-label', kind === 'now'
+    ? `${name}, visible now, ${Math.round(el)} degrees up, ${compass16(brg)}, ` +
+      (g === 'LIGHTS' ? 'look for its lights' : `${g.toLowerCase()} to spot`)
+    : `${name}, comes into view in ${minutes(t)} minutes, ${Math.round(el)} degrees up, ${compass16(brg)}`);
+  const cell = (cls, text) => b.append(make('span', cls, text));
+  cell('when', kind === 'now' ? 'NOW' : `${minutes(t)} MIN`);
+  cell('who', name);
+  cell('where', `${Math.round(el)}° ${compass16Short(brg)}`);
+  cell('grade label', g);
+  li.append(b);
+  return li;
+}
+// Waiting before the first data; empty if it never came.
+const emptyRows = (text) => (text && !(state.error && !state.updatedAt) ? [make('li', 'label', text)] : []);
+function renderNow() {
+  const ol = $('now');
+  const list = seeable().sort(byEase);
+  ol.replaceChildren(...(list.length
+    ? list.map((p) => timelineRow(p, 'now', { el: p.el, brg: p.brg }))
+    : emptyRows(state.updatedAt ? 'None right now.' : 'Waiting for the first update.')));
+}
+function renderNext() {
+  const ol = $('next');
+  ol.replaceChildren(...(state.next.length
+    ? state.next.map((n) => timelineRow(n.p, 'next', n))
+    : emptyRows(state.updatedAt ? 'Nothing on course to come into view in the next 10 minutes.' : '')));
+}
+
+// ---------- the sun ----------
+const norm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+const mix = (a, b, k) => norm([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]);
+const wrap = (d) => ((d % 360) + 360) % 360;
+const azOf = (v) => wrap(deg(Math.atan2(v[0], v[1])));
+
+// The sun, from NOAA's general solar position equations: within half a degree of ephem.
+// Ignores refraction (about half a degree near the horizon).
+function sunAt(date, lat, lon) {
+  const doy = Math.floor((date - Date.UTC(date.getUTCFullYear(), 0, 1)) / 864e5) + 1;
+  const hr = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  const g = 2 * Math.PI / 365 * (doy - 1 + (hr - 12) / 24);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) +
+    0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const ha = rad((hr * 60 + eqt + 4 * lon) / 4 - 180);
+  const phi = rad(lat);
+  const cosZ = Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.cos(ha);
+  const el = 90 - deg(Math.acos(Math.max(-1, Math.min(1, cosZ))));
+  const az = wrap(deg(Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(phi) - Math.tan(decl) * Math.cos(phi))) + 180);
+  return { az, el };
+}
+
+// ---------- the Moon and planets ----------
+// From Paul Schlyter's "How to compute planetary positions", good to a few arcminutes.
+const sind = (x) => Math.sin(rad(x)), cosd = (x) => Math.cos(rad(x));
+const daysJ2000 = (date) => date / 864e5 + 2440587.5 - 2451543.5;   // Schlyter's day 0 is 1999 Dec 31, 0h UT
+// Local sidereal time in degrees.
+function siderealDeg(date, lon) {
+  const jd = date / 864e5 + 2440587.5;
+  return wrap(280.46061837 + 360.98564736629 * (jd - 2451545) + lon);
+}
+function kepler(M, e) {
+  let E = M + deg(e * sind(M) * (1 + e * cosd(M)));
+  for (let i = 0; i < 8; i++) E -= (E - deg(e * sind(E)) - M) / (1 - e * cosd(E));
+  return E;
+}
+// Ecliptic x, y, z from orbital elements.
+function orbit(N, i, w, a, e, M) {
+  const E = kepler(wrap(M), e);
+  const xv = a * (cosd(E) - e), yv = a * Math.sqrt(1 - e * e) * sind(E);
+  const v = deg(Math.atan2(yv, xv)), r = Math.hypot(xv, yv);
+  return [
+    r * (cosd(N) * cosd(v + w) - sind(N) * sind(v + w) * cosd(i)),
+    r * (sind(N) * cosd(v + w) + cosd(N) * sind(v + w) * cosd(i)),
+    r * sind(v + w) * sind(i),
+  ];
+}
+// Brightest first, so they get a label when names crowd.
+const PLANETS = {
+  Venus: (d) => [76.6799 + 2.46590e-5 * d, 3.3946 + 2.75e-8 * d, 54.8910 + 1.38374e-5 * d, 0.723330, 0.006773 - 1.302e-9 * d, 48.0052 + 1.6021302244 * d],
+  Jupiter: (d) => [100.4542 + 2.76854e-5 * d, 1.3030 - 1.557e-7 * d, 273.8777 + 1.64505e-5 * d, 5.20256, 0.048498 + 4.469e-9 * d, 19.8950 + 0.0830853001 * d],
+  Mars: (d) => [49.5574 + 2.11081e-5 * d, 1.8497 - 1.78e-8 * d, 286.5016 + 2.92961e-5 * d, 1.523688, 0.093405 + 2.516e-9 * d, 18.6021 + 0.5240207766 * d],
+  Saturn: (d) => [113.6634 + 2.38980e-5 * d, 2.4886 - 1.081e-7 * d, 339.3939 + 2.97661e-5 * d, 9.55475, 0.055546 - 9.499e-9 * d, 316.9670 + 0.0334442282 * d],
+};
+// Ecliptic to equatorial, then to azimuth and elevation.
+function eclToEq(x, y, z, d) {
+  const ecl = 23.4393 - 3.563e-7 * d;
+  return [x, y * cosd(ecl) - z * sind(ecl), y * sind(ecl) + z * cosd(ecl)];
+}
+function eqToHorizon(xe, ye, ze, date, lat, lon) {
+  const ra = deg(Math.atan2(ye, xe)), dec = deg(Math.atan2(ze, Math.hypot(xe, ye)));
+  const ha = siderealDeg(date, lon) - ra;
+  const x = cosd(ha) * cosd(dec), y = sind(ha) * cosd(dec), z = sind(dec);
+  const xh = x * sind(lat) - z * cosd(lat), zh = x * cosd(lat) + z * sind(lat);
+  return { az: wrap(deg(Math.atan2(y, xh)) + 180), el: deg(Math.asin(Math.max(-1, Math.min(1, zh)))) };
+}
+function sunEcl(d) {
+  const w = 282.9404 + 4.70935e-5 * d, e = 0.016709 - 1.151e-9 * d, M = wrap(356.0470 + 0.9856002585 * d);
+  const E = kepler(M, e);
+  const xv = cosd(E) - e, yv = Math.sqrt(1 - e * e) * sind(E);
+  const lon = deg(Math.atan2(yv, xv)) + w, r = Math.hypot(xv, yv);
+  return { x: r * cosd(lon), y: r * sind(lon), lon: wrap(lon), M };
+}
+function planetsAt(date, lat, lon) {
+  const d = daysJ2000(date), sun = sunEcl(d);
+  const Mj = wrap(19.8950 + 0.0830853001 * d), Ms = wrap(316.9670 + 0.0334442282 * d);
+  const out = [];
+  for (const name in PLANETS) {
+    let [x, y, z] = orbit(...PLANETS[name](d));
+    // Jupiter and Saturn pull on each other enough to matter.
+    if (name === 'Jupiter' || name === 'Saturn') {
+      const r = Math.hypot(x, y, z);
+      let lo = deg(Math.atan2(y, x)), la = deg(Math.asin(z / r));
+      if (name === 'Jupiter') {
+        lo += -0.332 * sind(2 * Mj - 5 * Ms - 67.6) - 0.056 * sind(2 * Mj - 2 * Ms + 21) + 0.042 * sind(3 * Mj - 5 * Ms + 21) -
+          0.036 * sind(Mj - 2 * Ms) + 0.022 * cosd(Mj - Ms) + 0.023 * sind(2 * Mj - 3 * Ms + 52) - 0.016 * sind(Mj - 5 * Ms - 69);
+      } else {
+        lo += 0.812 * sind(2 * Mj - 5 * Ms - 67.6) - 0.229 * cosd(2 * Mj - 4 * Ms - 2) + 0.119 * sind(Mj - 2 * Ms - 3) +
+          0.046 * sind(2 * Mj - 6 * Ms - 69) + 0.014 * sind(Mj - 3 * Ms + 32);
+        la += -0.020 * cosd(2 * Mj - 4 * Ms - 2) + 0.018 * sind(2 * Mj - 6 * Ms - 49);
+      }
+      x = r * cosd(la) * cosd(lo); y = r * cosd(la) * sind(lo); z = r * sind(la);
+    }
+    const [xe, ye, ze] = eclToEq(x + sun.x, y + sun.y, z, d);
+    out.push({ name, ...eqToHorizon(xe, ye, ze, date, lat, lon) });
+  }
+  return out;
+}
+// The Moon from the observer's spot (up to a degree off the geocentric one), and how lit it is.
+function moonAt(date, lat, lon) {
+  const d = daysJ2000(date), sun = sunEcl(d);
+  const N = 125.1228 - 0.0529538083 * d, w = 318.0634 + 0.1643573223 * d, M = wrap(115.3654 + 13.0649929509 * d);
+  const [x0, y0, z0] = orbit(N, 5.1454, w, 60.2666, 0.054900, M);
+  const Ms = sun.M, Ls = Ms + 282.9404 + 4.70935e-5 * d, Lm = M + w + N, D = Lm - Ls, F = Lm - N;
+  let r = Math.hypot(x0, y0, z0), lo = deg(Math.atan2(y0, x0)), la = deg(Math.asin(z0 / r));
+  lo += -1.274 * sind(M - 2 * D) + 0.658 * sind(2 * D) - 0.186 * sind(Ms) - 0.059 * sind(2 * M - 2 * D) -
+    0.057 * sind(M - 2 * D + Ms) + 0.053 * sind(M + 2 * D) + 0.046 * sind(2 * D - Ms) + 0.041 * sind(M - Ms) -
+    0.035 * sind(D) - 0.031 * sind(M + Ms) - 0.015 * sind(2 * F - 2 * D) + 0.011 * sind(M - 4 * D);
+  la += -0.173 * sind(F - 2 * D) - 0.055 * sind(M - F - 2 * D) - 0.046 * sind(M + F - 2 * D) + 0.033 * sind(F + 2 * D) + 0.017 * sind(2 * M + F);
+  r += -0.58 * cosd(M - 2 * D) - 0.46 * cosd(2 * D);
+  const [xe, ye, ze] = eclToEq(r * cosd(la) * cosd(lo), r * cosd(la) * sind(lo), r * sind(la), d);
+  // Move from the Earth's center to the observer, in Earth radii.
+  const lst = siderealDeg(date, lon);
+  const ox = cosd(lat) * cosd(lst), oy = cosd(lat) * sind(lst), oz = sind(lat);
+  const sky = eqToHorizon(xe - ox, ye - oy, ze - oz, date, lat, lon);
+  const elong = Math.acos(cosd(la) * cosd(lo - sun.lon));
+  return { name: 'Moon', ...sky, lit: (1 - Math.cos(elong)) / 2 };
+}
+
+// Can you see it? Empty means yes; otherwise why not. Estimates, like the plane cutoffs.
+function bodyWhy(b, sun) {
+  if (b.el < 0) return 'Below the horizon.';
+  if (b.el < MIN_EL) return `Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`;
+  if (b.kind === 'moon') {
+    return sun.el > 0 && (b.lit < 0.1 || apart(b.az, b.el, sun.az, sun.el) < SUN_CLEAR) ? 'Too thin to pick out in daylight.' : '';
+  }
+  // Venus shows in twilight; the other planets need a dark sky.
+  return sun.el > (b.name === 'Venus' ? 0 : -6) ? 'The sky is too bright.' : '';
+}
+// The Moon and planets, each with a yes or no for the eye.
+function skyBodies(date) {
+  const { lat, lon } = state.obs;
+  const sun = sunAt(date, lat, lon);
+  const list = [{ kind: 'moon', ...moonAt(date, lat, lon) }]
+    .concat(planetsAt(date, lat, lon).map((p) => ({ kind: 'planet', ...p })));
+  list.forEach((b) => { b.why = bodyWhy(b, sun); b.ok = !b.why; });
+  return list;
+}
+// A little way from a body toward the sun, so a lit side can face the right way.
+function towardSun(b, sun) {
+  const v = (az, el) => [cosd(el) * sind(az), cosd(el) * cosd(az), sind(el)];
+  const p = mix(v(b.az, b.el), v(sun.az, sun.el), 0.02);
+  return { az: azOf(p), el: deg(Math.asin(p[2])) };
+}
+// The Moon as it looks, its lit side toward the sun.
+function moonGlyph(x, y, r, angle, lit, stroke) {
+  const m = svgEl('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` });
+  m.append(svgEl('circle', { r, fill: 'var(--muted)' }));
+  const rx = (r * Math.abs(1 - 2 * lit)).toFixed(2);
+  m.append(svgEl('path', {
+    d: `M0,${-r} A${r},${r} 0 0 1 0,${r} A${rx},${r} 0 0 ${lit < 0.5 ? 0 : 1} 0,${-r} Z`,
+    fill: 'var(--text)', transform: `rotate(${(angle - 90).toFixed(0)})`,
+  }));
+  m.append(svgEl('circle', { r, fill: 'none', stroke, 'stroke-width': 2 }));
+  return m;
+}
+
+function setText(el, s) { if (el.textContent !== s) el.textContent = s; }
+
+// ---------- interaction ----------
+function select(hex) {
+  state.selected = hex;
+  state.picked = true;
+  state.notice = '';
+  render();
+}
+svg.addEventListener('click', (e) => {
+  const g = e.target.closest('[data-hex]');
+  if (g) select(g.getAttribute('data-hex'));
+});
+['now', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-hex]');
+  // Show the answer, then select; render() centres the panorama on the plane.
+  if (b) { $('title').scrollIntoView({ block: 'start' }); select(b.dataset.hex); }
+}));
+
+const placeSel = $('place');
+PLACES.forEach((p) => placeSel.append(new Option(p.label, p.id)));
+placeSel.append(new Option('My location', 'me'));
+placeSel.addEventListener('change', () => {
+  state.wanted = null;
+  if (placeSel.value !== 'me') { setObserver(PLACES.find((p) => p.id === placeSel.value)); return; }
+  const back = () => { placeSel.value = state.obs.id; };
+  if (!navigator.geolocation) { back(); setText($('status'), 'This browser can\'t share a location.'); return; }
+  setText($('status'), 'Finding you. Rounded to about 1 km before it leaves your phone.');
+  navigator.geolocation.getCurrentPosition((pos) => {
+    setObserver({ id: 'me', label: 'My location', title: 'where you are', lat: pos.coords.latitude, lon: pos.coords.longitude });
+  }, (err) => {
+    back();
+    setText($('status'), `Couldn't get your location (${err.message}).`);
+  }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+});
+function setObserver(obs) {
+  state.obs = obs;
+  state.selected = null;
+  state.picked = false;
+  state.notice = '';
+  history.replaceState(null, '', placeURL(obs));
+  state.aircraft = [];
+  state.updatedAt = null;
+  state.error = '';
+  document.title = obs.id === 'me' ? 'Sky over you' : `Sky over ${obs.title}`;
+  render();
+  schedule();
+}
+
+document.addEventListener('visibilitychange', schedule);
+
+// Between updates, the planes glide on every second.
+setInterval(() => {
+  if (document.visibilityState === 'visible' && state.aircraft.length) {
+    updatePositions(Date.now());
+    moveChart();
+  }
+}, 1000);
+
+let resizeTimer = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(buildChart, 150); });
+
+// Links can name a listed place (?at=KSFO) and a plane (?plane=a1b2c3).
+const params = new URLSearchParams(location.search);
+const linkedPlane = (params.get('plane') || '').toLowerCase();
+if (/^~?[0-9a-f]{6}$/.test(linkedPlane)) state.wanted = linkedPlane;
+const linkedPlace = PLACES.find((p) => p.id.toLowerCase() === (params.get('at') || '').toLowerCase());
+if (linkedPlace) placeSel.value = linkedPlace.id;
+setObserver(linkedPlace || PLACES[0]);
 })();
 </script>
 </body>
