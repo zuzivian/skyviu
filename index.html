@@ -27,8 +27,9 @@
 
     --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-data: "B612 Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --fs-label: 12px; --fs-data: 14px; --fs-body: 16px; --fs-lead: 20px; --fs-answer: 40px;
-    --lh-label: 16px; --lh-data: 20px; --lh-body: 24px; --lh-lead: 28px; --lh-answer: 44px;
+    /* rem, so text follows the reader's font size. */
+    --fs-label: .75rem; --fs-data: .875rem; --fs-body: 1rem; --fs-lead: 1.25rem; --fs-answer: 2.5rem;
+    --lh-label: 1rem; --lh-data: 1.25rem; --lh-body: 1.5rem; --lh-lead: 1.75rem; --lh-answer: 2.75rem;
     --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
     --r0: 0; --r1: 2px;
     --gutter: var(--s6);
@@ -48,7 +49,7 @@
     --below: rgba(232,238,244,.03);
   }
   @media (max-width: 639px) {
-    :root { --fs-answer: 28px; --lh-answer: 32px; --fs-lead: 16px; --gutter: var(--s4); }
+    :root { --fs-answer: 1.75rem; --lh-answer: 2rem; --fs-lead: 1rem; --gutter: var(--s4); }
   }
 
   * { box-sizing: border-box; }
@@ -79,11 +80,17 @@
   }
   select option { background: var(--raised); color: var(--text); }
   button { cursor: pointer; }
+  /* Hover and focus: colour and opacity over 120 ms. Nothing scales (§4.4). */
+  a, select, button { transition: color .12s, background-color .12s, border-color .12s, text-decoration-color .12s, opacity .12s; }
+  select:hover, button:hover { border-color: var(--muted); }
   :focus-visible { outline: 2px solid var(--visible); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
 
   /* Shell: header bar, main, footer. Content and chrome share one 1600px column. */
   .bar {
-    display: flex; align-items: center; gap: var(--s4); height: 56px;
+    display: flex; align-items: center; gap: var(--s4); min-height: 56px;
     padding: 0 max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter)));
     background: var(--raised); border-bottom: 1px solid var(--line);
   }
@@ -94,14 +101,14 @@
   #title { color: var(--visible); margin: 0 0 var(--s2); }
   footer { margin: 0; padding: var(--s4) max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter))) var(--s6); border-top: 1px solid var(--line); }
   @media (max-width: 639px) {
-    /* The 48px row holds the wordmark and place; the status line wraps under it until #52 moves it. */
-    .bar { height: auto; min-height: 48px; flex-wrap: wrap; row-gap: 0; }
+    /* The 48px row holds the wordmark and place; the status line wraps under it. */
+    .bar { min-height: 48px; flex-wrap: wrap; row-gap: 0; }
     .bar select { flex: 1 1 0; margin: 2px 0; }
     .bar .status { flex: 1 0 100%; margin: 0; padding-bottom: var(--s2); text-align: left; }
     main { padding-top: var(--s4); }
   }
 
-  /* The answer for the selected plane: where to look, then what it is. No glyphs; the panorama is the picture. */
+  /* The answer: where to look, then what it is. */
   .head { margin: 0 0 var(--s5); }
   .head .answer { font: 700 var(--fs-answer)/var(--lh-answer) var(--font-text); letter-spacing: -.01em; margin: 0 0 var(--s2); }
   .head .sub { font: 400 var(--fs-lead)/var(--lh-lead) var(--font-text); color: var(--muted); margin: 0; }
@@ -111,10 +118,14 @@
   .pano { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
   svg#sky { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
   #sky text { font: 400 11px/1 var(--font-text); }
-  #sky .t-lab { font: 400 var(--fs-label)/1 var(--font-data); letter-spacing: .08em; text-transform: uppercase; }
-  #sky .t-cmp { font: 400 var(--fs-label)/1 var(--font-data); letter-spacing: 1px; }
+  #sky .t-lab { font: 400 12px/1 var(--font-data); letter-spacing: .08em; text-transform: uppercase; }
+  #sky .t-cmp { font: 400 12px/1 var(--font-data); letter-spacing: 1px; }
   #sky .t-cs { font-size: 13px; }
   #sky .t-cs.sel { font-weight: 700; }
+  /* Planes glide between the 1 s ticks; a new selection ring fades in. */
+  #sky .planes > * { transition: transform 1s linear; }
+  #sky [data-hex] { cursor: pointer; }
+  #sky .ring { transition: opacity .15s ease-out; }
   /* After 30 s without fresh data the planes fade; the frame stays. */
   .pano.stale .planes { opacity: .5; }
   @media (max-width: 639px) {
@@ -122,7 +133,7 @@
     svg#sky { width: 960px; }
   }
 
-  /* Below the panorama: the timeline on the left, the plane and how it decides on the right. */
+  /* Below the panorama: the timeline, then the plane and how it decides. */
   .lower { display: grid; grid-template-columns: 3fr 2fr; gap: var(--s7); align-items: start; margin-top: var(--s5); }
   .lower > * { min-width: 0; }
   @media (max-width: 899px) { .lower { grid-template-columns: 1fr; } }
@@ -134,7 +145,7 @@
   ol.rows li.label { padding: var(--s3) 0; border-top: 1px solid var(--line); }
   #next { border-bottom: 1px solid var(--line); }
   ol.rows button {
-    display: grid; grid-template-columns: 64px 1fr auto 64px; gap: var(--s4); align-items: baseline;
+    display: grid; grid-template-columns: 4rem 1fr auto 4rem; gap: var(--s4); align-items: baseline;
     width: 100%; padding: var(--s3) 0; text-align: left; background: none;
     border: 0; border-top: 1px solid var(--line); border-radius: var(--r0);
   }
@@ -149,7 +160,7 @@
   .timeline .note { margin: var(--s3) 0 0; }
   @media (max-width: 639px) {
     /* The grade drops to its own line under the name. */
-    ol.rows button { grid-template-columns: 56px 1fr auto; row-gap: 0; }
+    ol.rows button { grid-template-columns: 3.5rem 1fr auto; row-gap: 0; }
     ol.rows .grade { grid-column: 2; grid-row: 2; }
     ol.rows .grade:empty { display: none; }
   }
@@ -278,9 +289,8 @@
   const NIGHT_SMALL_MI = 10;
   const SUN_CLEAR = 15;        // degrees; closer to the sun than this is lost in glare
   const ARCMIN_PER_RAD = 3437.75;
-  // Typical wingspan in meters for each ADS-B emitter category, from a common aircraft in it:
-  // A1 Cessna 172, A2 CRJ200, A3 Airbus A320 and Boeing 737, A4 Boeing 757, A5 Boeing 787 and 777,
-  // A7 the rotor of a Robinson R44.
+  // Typical wingspan (m) per ADS-B category: A1 Cessna 172, A2 CRJ200, A3 A320/737, A4 757,
+  // A5 787/777, A7 the rotor of an R44.
   const SPAN_M = { A1: 11, A2: 21, A3: 35, A4: 38, A5: 62, A6: 10, A7: 10, B1: 15, B2: 15, B4: 10, B6: 3 };
   const SMALL = new Set(['A1', 'A6', 'A7', 'B1', 'B4', 'B6']);
 
@@ -363,8 +373,7 @@
     }
     return bottom - pct * (bottom - top) / 100;
   }
-  // x: bearing across, north in the middle and south at both edges. Mobile is 2.4 px per
-  // degree with a 48 px margin each side for the copies near south.
+  // x: bearing, N in the middle, S at both edges. Mobile: 2.4 px/° with 48 px margins.
   function panoX(b, W, mobile) {
     return mobile ? 48 + ((b + 180) % 360) * 2.4 : ((b + 180) % 360) / 360 * W;
   }
@@ -382,8 +391,7 @@
 
   // ---------- data ----------
   function enrich(a, nowMs, fetchedAt) {
-    // Some aircraft on a runway or taxiway report a small altitude instead of "ground".
-    // Treat slow and low as on the ground.
+    // Some aircraft on a runway report a small altitude, not "ground": slow and low is ground.
     const onGround = a.alt_baro === 'ground' ||
       (typeof a.alt_baro === 'number' && a.alt_baro < 500 && typeof a.gs === 'number' && a.gs < 50);
     const ft = typeof a.alt_geom === 'number' ? a.alt_geom : (typeof a.alt_baro === 'number' ? a.alt_baro : 0);
@@ -398,8 +406,7 @@
     }, fetchedAt);
   }
 
-  // Where a plane should be at atMs: its last position moved along its track at its last speed
-  // and climb. A position that was already stale when it arrived stays where it was heard.
+  // Where a plane is at atMs: moved on along its track, speed and climb, unless already stale.
   function locate(p, atMs) {
     p.since = p.age + Math.max(0, (atMs - p.fetchedAt) / 1000);
     p.moved = !p.onGround && p.gs != null && p.track != null && p.age <= STALE_S;
@@ -449,8 +456,7 @@
     return (b.see.ok - a.see.ok) || (b.see.arcmin - a.see.arcmin);
   }
 
-  // One request at a time. If the reader moves while one is on its way, it is cancelled and the
-  // new place is asked for straight away.
+  // One request at a time; a place change cancels it and asks for the new place at once.
   let inflight = null;   // { obs, ctrl }
   async function load() {
     const obs = state.obs;
@@ -524,7 +530,7 @@
   const seeable = () => state.aircraft.filter((p) => p.see.ok);
 
   function render() {
-    // Lists and the card are rebuilt on every update. Put keyboard focus back where it was.
+    // Lists and the card are rebuilt; put keyboard focus back.
     const focusKey = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.focus : null;
     updatePositions(Date.now());
     state.sun = sunAt(new Date(), state.obs.lat, state.obs.lon);
@@ -537,7 +543,7 @@
       else state.notice = 'The plane in that link has left the area.';
       state.wanted = null;
     }
-    // Until the reader picks one, show the easiest plane to spot, or else the next one coming.
+    // Until the reader picks one, show the easiest plane, or else the next one coming.
     const pool = seeable().sort(byEase);
     const gone = !state.aircraft.some((a) => a.hex === state.selected);
     const stale = !state.picked && pool.length && !pool.some((a) => a.hex === state.selected);
@@ -546,13 +552,13 @@
       state.picked = false;
     }
     renderStatus();
-    const view = renderChart();
+    buildChart();
     describeSky();
     renderHead();
     renderCard();
     renderNow();
     renderNext();
-    centreSelected(view);
+    centreSelected();
     if (focusKey && !document.activeElement.dataset.focus) {
       const again = document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);
       if (again) again.focus({ preventScroll: true });
@@ -563,13 +569,9 @@
     const el = $('status'), title = $('title');
     const air = state.aircraft.filter((p) => !p.onGround).length;
     const n = seeable().length;
-    title.replaceChildren();
     if (state.updatedAt) {
-      const num = document.createElement('span');
-      num.className = 'n';
-      num.textContent = n ? String(n) : 'No';
-      title.append(num, ` plane${n === 1 ? '' : 's'} you can see from ${state.obs.title}`);
-    } else title.textContent = `Planes you can see from ${state.obs.title}`;
+      setText(title, `${n || 'No'} plane${n === 1 ? '' : 's'} you can see from ${state.obs.title}`);
+    } else setText(title, `Planes you can see from ${state.obs.title}`);
     const cls = (c) => { if (el.className !== c) el.className = c; };
     if (state.error) {
       cls('status error');
@@ -577,7 +579,7 @@
       return;
     }
     if (!state.updatedAt) {
-      // Before anything has come back the page is connecting; after a place change it's finding planes there.
+      // Connecting at first; finding planes after a place change.
       cls('status');
       setText(el, state.heard ? 'Finding planes.' : 'Connecting to adsb.lol');
       return;
@@ -594,12 +596,12 @@
     return e;
   }
 
-  // Text widths for label collisions, measured on a canvas so the 1 s tick never forces layout.
+  // Label widths, measured on a canvas (no layout), cached by plane and callsign. Only buildChart() measures.
   const widths = new Map();
   const measurer = document.createElement('canvas').getContext('2d');
   if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => widths.clear());
-  function textWidth(s, size, data, weight = 400, spacing = 0) {
-    const key = `${size}|${data}|${weight}|${spacing}|${s}`;
+  function textWidth(s, size, data, weight = 400, spacing = 0, id = '') {
+    const key = `${id}|${s}|${size}|${data}|${weight}`;
     if (!widths.has(key)) {
       const family = getComputedStyle(document.documentElement).getPropertyValue(data ? '--font-data' : '--font-text');
       measurer.font = `${weight} ${size}px ${family || 'sans-serif'}`;
@@ -608,33 +610,45 @@
     return widths.get(key);
   }
   const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const fix = (n) => n.toFixed(1);
+  // Signed bearing difference in -180..180, so motion across south doesn't jump.
+  const turn = (d) => (d % 360 + 540) % 360 - 180;
+  // CSS transforms animate; the SVG transform attribute doesn't.
+  const place = (x, y, a = 0) => `translate(${fix(x)}px, ${fix(y)}px) rotate(${a.toFixed(0)}deg)`;
+  // Screen angle (0 = up, clockwise) from one sky point to another.
+  const screenAngle = (v, b1, e1, b2, e2) => deg(Math.atan2(turn(b2 - b1) * v.scale, v.Y(e1) - v.Y(e2)));
+  // Which way a plane appears to move: from where it is to where it is 30 s on.
+  function heading(v, p, lat, lon, ft, brg, el) {
+    if (p.track == null) return 0;
+    const ahead = project(lat, lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
+    const q = geo(state.obs, ahead.lat, ahead.lon);
+    return screenAngle(v, brg, el, q.brg, elevation(q.d, ft * 0.3048));
+  }
 
-  // The horizon panorama (docs/redesign-2026-11.md §5.3): bearing across with north in the
-  // middle, elevation up with the 10–30° band given most of the height.
-  function renderChart() {
+  // The horizon panorama (docs/redesign-2026-11.md §5.3). buildChart() makes every node, on
+  // render(), resize and selection; moveChart() only moves them, each second.
+  let view = null;    // { W, X, Y, scale, marks }: marks are the moving nodes and where they were drawn
+  let ringFor;        // the plane whose selection ring has already faded in
+  function buildChart() {
     const mobile = matchMedia('(max-width: 639px)').matches;
     const W = mobile ? 864 + 2 * 48 : Math.max(300, Math.round(pano.clientWidth) || 960);
     const H = mobile ? 280 : 360;
     const top = 24, bottom = H - 40;
     const scale = mobile ? 2.4 : W / 360;   // px per degree of bearing
     const period = 360 * scale;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.replaceChildren();
     const X = (b) => panoX(b, W, mobile);
     const Y = (el) => panoY(el, top, bottom);
+    const v = view = { W, X, Y, scale, marks: [] };
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.replaceChildren();
     const crisp = (y) => Math.round(y) + 0.5;
-    // Every x a point is drawn at. On mobile anything near S is drawn again 864 px away so it
-    // is never cut in half; on desktop the same happens for marks that touch the S edges.
+    // Every x a point is drawn at: near S it is drawn again one turn away, so it's never cut in half.
     const xsOf = (x) => {
       const out = [x];
       const lo = mobile ? 0 : -24, hi = mobile ? W : W + 24;
       for (const c of [x - period, x + period]) if (c >= lo && c <= hi) out.push(c);
       return out;
     };
-    // Screen angle (0 = up, clockwise) from one sky point to another, across the S seam too.
-    const screenAngle = (b1, e1, b2, e2) => deg(Math.atan2(((b2 - b1 + 540) % 360 - 180) * scale, -(Y(e2) - Y(e1))));
-    const fix = (n) => n.toFixed(1);
-
     const line = 'var(--line)', muted = 'var(--muted)', text = 'var(--text)';
     const g = svgEl('g', {});
     svg.append(g);
@@ -648,19 +662,17 @@
     });
     g.append(svgEl('text', { x: 4, y: top - 8, fill: muted, class: 't-lab' }, 'overhead'));   // uppercased by CSS
     g.append(svgEl('line', { x1: 0, y1: crisp(bottom), x2: W, y2: crisp(bottom), stroke: muted, 'stroke-width': 1 }));
-    // No data ever: the grid alone says the page is there but has nothing to put on it.
-    const blind = state.error && !state.updatedAt;
-    pano.classList.toggle('stale', !!(state.error && state.updatedAt && Date.now() - state.updatedAt > 30000));
-    if (blind) return { W, X, scale };
+    // No data ever: the grid alone.
+    stale();
+    if (state.error && !state.updatedAt) return;
 
     // Compass ribbon: a tick every 15°, longer every 45°, with a letter under each long tick.
-    const LETTERS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     for (let b = 0; b < 360; b += 15) {
       const major = b % 45 === 0;
       xsOf(X(b)).forEach((x) => {
         g.append(svgEl('line', { x1: fix(x), y1: bottom, x2: fix(x), y2: bottom + (major ? 10 : 5), stroke: muted, 'stroke-width': 1 }));
         if (!major) return;
-        const letter = LETTERS[b / 45];
+        const letter = compassShort(b);
         // Keep the S at each edge inside the picture.
         const anchor = x < 8 ? 'start' : (x > W - 8 ? 'end' : 'middle');
         g.append(svgEl('text', {
@@ -680,7 +692,7 @@
         const box = { x: x - w / 2 - 2, y: bottom - 17, w: w + 4, h: 13 };
         if (box.x < 0 || box.x + box.w > W || marks.some((m) => overlaps(m, box))) return;
         marks.push(box);
-        g.append(svgEl('text', { x: fix(x), y: bottom - 6, fill: muted, 'text-anchor': 'middle', class: 't-small' }, name));
+        g.append(svgEl('text', { x: fix(x), y: bottom - 6, fill: muted, 'text-anchor': 'middle' }, name));
       });
     });
 
@@ -699,105 +711,130 @@
       xsOf(X(b.az)).forEach((x) => {
         if (b.kind === 'moon') {
           const t = towardSun(b, state.sun);
-          g.append(moonGlyph(x, y, 9, screenAngle(b.az, b.el, t.az, t.el), b.lit, muted));
+          g.append(moonGlyph(x, y, 9, screenAngle(v, b.az, b.el, t.az, t.el), b.lit, muted));
           return;
         }
         g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: 3, fill: text }));
-        g.append(svgEl('text', { x: fix(x + 6), y: fix(y + 4), fill: muted, class: 't-small' }, b.name));
+        g.append(svgEl('text', { x: fix(x + 6), y: fix(y + 4), fill: muted }, b.name));
       });
     });
 
-    // Planes. Faint dots for the ones you can't see, then soon outlines, then visible silhouettes.
-    // They share one layer so stale data can fade them without the frame.
+    // Planes share one layer, so stale data fades them without the frame. v.marks keeps each
+    // moving node and where it was drawn.
     const planes = svgEl('g', { class: 'planes' });
     g.append(planes);
+    const add = (el, p, kind, x, y, brg, a) => {
+      el.style.transform = place(x, y, a);
+      planes.append(el);
+      const m = { el, p, kind, x, y, brg, labels: [] };
+      v.marks.push(m);
+      return m;
+    };
     const soon = new Map(state.next.map((n) => [n.p.hex, n]));
     const air = state.aircraft.filter((p) => !p.onGround);
-    air.filter((p) => !p.see.ok && !soon.has(p.hex) && p.hex !== state.selected).forEach((p) => {
-      xsOf(X(p.brg)).forEach((x) => planes.append(svgEl('circle', { cx: fix(x), cy: fix(Y(p.el)), r: 2.5, fill: 'var(--faint)' })));
+    // Faint dots for the ones you can't see, at most 80, nearest first.
+    air.filter((p) => !p.see.ok && !soon.has(p.hex) && p.hex !== state.selected).sort((a, b) => a.d - b.d).slice(0, 80).forEach((p) => {
+      xsOf(X(p.brg)).forEach((x) => add(svgEl('circle', { r: 2.5, fill: 'var(--faint)', class: 'dot' }), p, 'dot', x, Y(p.el), p.brg));
     });
 
-    // Which way a plane appears to move: from where it is to where it is 30 s on.
-    const heading = (p, lat, lon, ft, brg, el) => {
-      if (p.track == null) return 0;
-      const ahead = project(lat, lon, p.track, Math.max(p.gs || 100, 50) * KT_MS * 30);
-      const q = geo(state.obs, ahead.lat, ahead.lon);
-      return screenAngle(brg, el, q.brg, elevation(q.d, ft * 0.3048));
-    };
-    const glyph = (p, size, angle, kind) => svgEl('path', {
-      d: SHAPES[p.raw.category] || SHAPES.default,
-      transform: `rotate(${angle.toFixed(0)}) scale(${(size / 24).toFixed(3)}) translate(-12 -12)`,
-      ...(kind === 'soon'
-        ? { fill: 'none', stroke: 'var(--soon)', 'stroke-dasharray': '2 2', 'vector-effect': 'non-scaling-stroke', 'stroke-width': 1.5 }
-        : { fill: kind === 'visible' ? 'var(--visible)' : 'var(--faint)' }),
-    });
-
-    // Each plane to draw with a mark: where its glyph sits and how it looks.
+    // Planes drawn with a mark. Soon planes sit where they come into view.
     const drawn = air.filter((p) => p.see.ok || soon.has(p.hex) || p.hex === state.selected).map((p) => {
       const n = !p.see.ok && soon.get(p.hex);
       if (n) {
         const to = project(p.lat, p.lon, p.track, p.gs * KT_MS * n.t);
-        return { p, kind: 'soon', brg: n.brg, el: n.el, size: glyphSize(n.arcmin), angle: heading(p, to.lat, to.lon, n.ft, n.brg, n.el), n };
+        return { p, kind: 'soon', brg: n.brg, el: n.el, size: glyphSize(n.arcmin), angle: heading(v, p, to.lat, to.lon, n.ft, n.brg, n.el), n };
       }
-      return { p, kind: p.see.ok ? 'visible' : 'faint', brg: p.brg, el: p.el, size: glyphSize(p.see.arcmin), angle: heading(p, p.lat, p.lon, p.ftNow, p.brg, p.el) };
+      return { p, kind: p.see.ok ? 'visible' : 'faint', brg: p.brg, el: p.el, size: glyphSize(p.see.arcmin), angle: heading(v, p, p.lat, p.lon, p.ftNow, p.brg, p.el) };
     });
-    const rank = (a, b) => (b.p.hex === state.selected) - (a.p.hex === state.selected) || byEase(a.p, b.p);
-    const order = drawn.slice().sort(rank);
+    const isSel = (m) => m.p.hex === state.selected;
     const KIND_ORDER = { faint: 0, soon: 1, visible: 2 };
+    const copies = new Map();   // hex -> its marks, one per copy, in xsOf order
+    const rings = [];
     // Back to front: soon under visible, the selected plane on top.
-    drawn.slice().sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || (a.p.hex === state.selected) - (b.p.hex === state.selected))
-      .forEach((m) => {
-        const y = Y(m.el);
-        xsOf(X(m.brg)).forEach((x) => {
-          const mark = svgEl('g', { transform: `translate(${fix(x)} ${fix(y)})`, 'data-hex': m.p.hex, tabindex: -1, style: 'cursor:pointer' });
-          if (m.kind === 'soon') {
-            // A dotted line from where it is now to where it comes into view.
-            const dx = ((m.p.brg - m.brg + 540) % 360 - 180) * scale;
-            planes.append(svgEl('line', { x1: fix(x + dx), y1: fix(Y(m.p.el)), x2: fix(x), y2: fix(y), stroke: 'var(--soon)', 'stroke-width': 1, 'stroke-dasharray': '1 3' }));
-          }
-          mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
-          if (m.p.hex === state.selected) {
-            const ring = m.kind === 'visible' ? 'var(--visible)' : (m.kind === 'soon' ? 'var(--soon)' : muted);
-            mark.append(svgEl('circle', { r: m.size, fill: 'none', stroke: ring, 'stroke-width': 1.5 }));
-          }
-          mark.append(m.kind === 'faint' ? svgEl('circle', { r: 2.5, fill: 'var(--faint)' }) : glyph(m.p, m.size, m.angle, m.kind));
-          planes.append(mark);
-        });
-      });
+    drawn.slice().sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || isSel(a) - isSel(b)).forEach((m) => {
+      const y = Y(m.el);
+      copies.set(m.p.hex, xsOf(X(m.brg)).map((x) => {
+        let path = null;
+        if (m.kind === 'soon') {
+          // A dotted line from where it is now to where it comes into view.
+          path = svgEl('line', { x1: fix(x + turn(m.p.brg - m.brg) * scale), y1: fix(Y(m.p.el)), x2: fix(x), y2: fix(y), stroke: 'var(--soon)', 'stroke-width': 1, 'stroke-dasharray': '1 3' });
+          planes.append(path);
+        }
+        const mark = svgEl('g', { 'data-hex': m.p.hex, tabindex: -1 });
+        mark.append(svgEl('circle', { r: 22, fill: 'transparent' }));
+        if (isSel(m)) {
+          const ring = svgEl('circle', { r: m.size, fill: 'none', stroke: m.kind === 'faint' ? muted : `var(--${m.kind})`, 'stroke-width': 1.5, class: 'ring' });
+          if (ringFor !== state.selected) { ring.style.opacity = 0; rings.push(ring); }
+          mark.append(ring);
+        }
+        mark.append(m.kind === 'faint' ? svgEl('circle', { r: 2.5, fill: 'var(--faint)' }) : svgEl('path', {
+          d: SHAPES[m.p.raw.category] || SHAPES.default,
+          transform: `scale(${(m.size / 24).toFixed(3)}) translate(-12 -12)`,
+          ...(m.kind === 'soon'
+            ? { fill: 'none', stroke: 'var(--soon)', 'stroke-dasharray': '2 2', 'vector-effect': 'non-scaling-stroke', 'stroke-width': 1.5 }
+            : { fill: 'var(--visible)' }),
+        }));
+        return Object.assign(add(mark, m.p, m.kind, x, y, m.brg, m.angle), { path });
+      }));
+    });
+    // The new selection ring fades in, once (§4.4).
+    rings.forEach((r) => { getComputedStyle(r).opacity; r.style.opacity = 1; });
+    ringFor = state.selected;
 
-    // Labels, easiest to spot first and the selected plane before all. A label that would
-    // overlap one already placed is dropped. Soon planes keep their "N MIN" tag.
+    // Labels, selected then easiest first; one that overlaps a placed label is dropped.
     const placed = [];
-    order.forEach((m) => {
-      const isSel = m.p.hex === state.selected;
+    drawn.sort((a, b) => isSel(b) - isSel(a) || byEase(a.p, b.p)).forEach((m) => {
+      const sel = isSel(m);
       const name = m.p.callsign || m.p.raw.r || m.p.hex.toUpperCase();
-      const nameW = textWidth(name, 13, false, isSel ? 700 : 400);
-      const tag = m.kind === 'soon' ? `${Math.max(1, Math.round(m.n.t / 60))} min` : '';
+      const nameW = textWidth(name, 13, false, sel ? 700 : 400, 0, m.p.hex);
+      const tag = m.kind === 'soon' ? `${minutes(m.n.t)} min` : '';
       const tagW = tag ? textWidth(tag.toUpperCase(), 12, true, 400, 0.96) : 0;
       const y = Y(m.el);
-      const half = Math.max(m.size / 2, isSel ? m.size : 0);
-      xsOf(X(m.brg)).forEach((x) => {
+      const half = Math.max(m.size / 2, sel ? m.size : 0);
+      xsOf(X(m.brg)).forEach((x, i) => {
+        const own = copies.get(m.p.hex)[i].labels;
         const blockW = (tag ? tagW + 6 : 0) + nameW;
         const right = x + half + 6 + blockW <= W - 4;
         // The tag sits next to the glyph, the callsign beyond it.
         const tagX = right ? x + half + 6 : x - half - 6 - tagW;
         const nameX = tag ? (right ? tagX + tagW + 6 : tagX - 6 - nameW) : (right ? x + half + 6 : x - half - 6 - nameW);
+        const label = (lx, ly, attrs, s) => { const t = svgEl('text', { x: fix(lx), y: fix(ly), 'pointer-events': 'none', ...attrs }, s); planes.append(t); own.push(t); };
         if (tag) {
           placed.push({ x: tagX, y: y - 8, w: tagW, h: 14 });
-          planes.append(svgEl('text', { x: fix(tagX), y: fix(y + 4), fill: 'var(--soon)', class: 't-lab', 'pointer-events': 'none' }, tag));
+          label(tagX, y + 4, { fill: 'var(--soon)', class: 't-lab' }, tag);
         }
         const box = { x: nameX - 2, y: y - 9, w: nameW + 4, h: 16 };
-        if (!isSel && placed.some((b) => overlaps(b, box))) return;
+        if (!sel && placed.some((b) => overlaps(b, box))) return;
         placed.push(box);
-        planes.append(svgEl('text', { x: fix(nameX), y: fix(y + 4.5), fill: text, class: isSel ? 't-cs sel' : 't-cs', 'pointer-events': 'none' }, name));
+        label(nameX, y + 4.5, { fill: text, class: sel ? 't-cs sel' : 't-cs' }, name);
       });
     });
-    return { W, X, scale };
+  }
+
+  // After 30 s without fresh data the planes fade; the frame stays.
+  const stale = () => pano.classList.toggle('stale', !!(state.error && state.updatedAt && Date.now() - state.updatedAt > 30000));
+
+  // The 1 s tick: transforms and line ends only; no new nodes, no measuring. A soon plane waits
+  // at its entry point while its line follows the plane.
+  function moveChart() {
+    if (!view) return;
+    stale();
+    const { Y, scale } = view;
+    view.marks.forEach((m) => {
+      const p = m.p, dx = turn(p.brg - m.brg) * scale;
+      if (m.kind === 'soon') {
+        if (m.path) { m.path.setAttribute('x1', fix(m.x + dx)); m.path.setAttribute('y1', fix(Y(p.el))); }
+        return;
+      }
+      const dy = Y(p.el) - m.y;
+      m.el.style.transform = place(m.x + dx, m.y + dy, m.kind === 'dot' ? 0 : heading(view, p, p.lat, p.lon, p.ftNow, p.brg, p.el));
+      m.labels.forEach((t) => { t.style.transform = place(dx, dy); });
+    });
   }
 
   // On a phone the strip scrolls; bring the selected plane (or north, at first) to the middle.
   let centred;
-  function centreSelected(view) {
+  function centreSelected() {
     if (!matchMedia('(max-width: 639px)').matches || centred === state.selected) return;
     const p = state.aircraft.find((a) => a.hex === state.selected);
     if (state.selected && !p) return;
@@ -816,8 +853,7 @@
       : 'Horizon view. No planes you can see right now. The list below has every plane.');
   }
 
-  // The answer, first: where to look, then which plane it is. Before any data, and when there's
-  // nothing to point at, the answer says so in one line (docs/redesign-2026-11.md §5.5).
+  // The answer: where to look, then which plane it is; otherwise one line on why not (§5.5).
   function renderHead() {
     const head = $('head');
     const p = state.updatedAt ? state.aircraft.find((a) => a.hex === state.selected) : null;
@@ -899,8 +935,7 @@
     card.append(dl, share);
   }
 
-  // A link that opens this page on the same place with this plane picked. "My location" is
-  // never put in a link.
+  // A link to this place with this plane picked. "My location" never goes in a link.
   async function sharePlane(p, btn) {
     const url = new URL(location.pathname, location.origin);
     if (state.obs.id !== 'me' && state.obs.id !== PLACES[0].id) url.searchParams.set('at', state.obs.id);
@@ -914,8 +949,7 @@
     }
   }
 
-  // Planes you can't see yet that will come into view soon, if each keeps its heading, speed and
-  // climb. Reports where each one first appears.
+  // Planes that come into view soon if each flies on as it is, and where each first appears.
   function upcoming() {
     const out = [];
     state.aircraft.forEach((p) => {
@@ -935,8 +969,7 @@
     return out.sort((a, b) => a.t - b.t).slice(0, 3);
   }
 
-  // "In your sky": the planes you can see, then the ones coming into view, as buttons, so picking
-  // one doesn't need a pointer on the panorama. Both lists are rebuilt every update.
+  // "In your sky": visible, then soon planes, as buttons, so picking one needs no pointer.
   function timelineRow(p, kind, { t, el, brg }) {
     const li = document.createElement('li');
     const b = document.createElement('button');
@@ -964,7 +997,7 @@
     li.textContent = text;
     return li;
   }
-  // Before the first data the timeline says it's waiting, once; if the data never came, it's empty.
+  // Waiting before the first data; empty if it never came.
   const emptyRows = (text) => (text && !(state.error && !state.updatedAt) ? [emptyRow(text)] : []);
   function renderNow() {
     const ol = $('now');
@@ -987,8 +1020,8 @@
   const wrap = (d) => ((d % 360) + 360) % 360;
   const azOf = (v) => wrap(deg(Math.atan2(v[0], v[1])));
 
-  // Where the sun is, from NOAA's general solar position equations. Within half a degree of the
-  // ephem library in tests. Ignores refraction, which lifts the sun about half a degree near the horizon.
+  // The sun, from NOAA's general solar position equations: within half a degree of ephem.
+  // Ignores refraction (about half a degree near the horizon).
   function sunAt(date, lat, lon) {
     const doy = Math.floor((date - Date.UTC(date.getUTCFullYear(), 0, 1)) / 864e5) + 1;
     const hr = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
@@ -1005,8 +1038,7 @@
   }
 
   // ---------- the Moon and planets ----------
-  // Moon and planets from Paul Schlyter's "How to compute planetary positions" (stjarnhimlen.se),
-  // good to a few arcminutes.
+  // From Paul Schlyter's "How to compute planetary positions", good to a few arcminutes.
   const sind = (x) => Math.sin(rad(x)), cosd = (x) => Math.cos(rad(x));
   const daysJ2000 = (date) => date / 864e5 + 2440587.5 - 2451543.5;   // Schlyter's day 0 is 1999 Dec 31, 0h UT
   // Local sidereal time in degrees.
@@ -1019,7 +1051,7 @@
     for (let i = 0; i < 8; i++) E -= (E - deg(e * sind(E)) - M) / (1 - e * cosd(E));
     return E;
   }
-  // Heliocentric (or for the Moon, geocentric) ecliptic x, y, z from orbital elements.
+  // Ecliptic x, y, z from orbital elements.
   function orbit(N, i, w, a, e, M) {
     const E = kepler(wrap(M), e);
     const xv = a * (cosd(E) - e), yv = a * Math.sqrt(1 - e * e) * sind(E);
@@ -1037,7 +1069,7 @@
     Mars: (d) => [49.5574 + 2.11081e-5 * d, 1.8497 - 1.78e-8 * d, 286.5016 + 2.92961e-5 * d, 1.523688, 0.093405 + 2.516e-9 * d, 18.6021 + 0.5240207766 * d],
     Saturn: (d) => [113.6634 + 2.38980e-5 * d, 2.4886 - 1.081e-7 * d, 339.3939 + 2.97661e-5 * d, 9.55475, 0.055546 - 9.499e-9 * d, 316.9670 + 0.0334442282 * d],
   };
-  // Ecliptic longitude and latitude to equatorial, then to azimuth and elevation for the observer.
+  // Ecliptic to equatorial, then to azimuth and elevation.
   function eclToEq(x, y, z, d) {
     const ecl = 23.4393 - 3.563e-7 * d;
     return [x, y * cosd(ecl) - z * sind(ecl), y * sind(ecl) + z * cosd(ecl)];
@@ -1082,8 +1114,7 @@
     }
     return out;
   }
-  // The Moon from the observer's spot (it's close enough that this shifts it up to a degree),
-  // and how much of it is lit.
+  // The Moon from the observer's spot (up to a degree off the geocentric one), and how lit it is.
   function moonAt(date, lat, lon) {
     const d = daysJ2000(date), sun = sunEcl(d);
     const N = 125.1228 - 0.0529538083 * d, w = 318.0634 + 0.1643573223 * d, M = wrap(115.3654 + 13.0649929509 * d);
@@ -1104,8 +1135,7 @@
     return { name: 'Moon', ...sky, lit: (1 - Math.cos(elong)) / 2 };
   }
 
-  // Can you see it with your eyes? Empty means yes; otherwise, why not. Estimates, like the
-  // plane cutoffs.
+  // Can you see it? Empty means yes; otherwise why not. Estimates, like the plane cutoffs.
   function bodyWhy(b, sun) {
     if (b.el < 0) return 'Below the horizon.';
     if (b.el < MIN_EL) return `Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`;
@@ -1130,7 +1160,7 @@
     const p = mix(v(b.az, b.el), v(sun.az, sun.el), 0.02);
     return { az: azOf(p), el: deg(Math.asin(p[2])) };
   }
-  // The Moon as it looks: the lit part white, the dark part gray, the lit side toward the sun.
+  // The Moon as it looks, its lit side toward the sun.
   function moonGlyph(x, y, r, angle, lit, stroke) {
     const m = svgEl('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` });
     m.append(svgEl('circle', { r, fill: 'var(--muted)' }));
@@ -1201,12 +1231,12 @@
   setInterval(() => {
     if (document.visibilityState === 'visible' && state.aircraft.length) {
       updatePositions(Date.now());
-      renderChart();
+      moveChart();
     }
   }, 1000);
 
   let resizeTimer = 0;
-  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 150); });
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(buildChart, 150); });
 
   // Links can name a listed place (?at=KSFO) and a plane (?plane=a1b2c3).
   const params = new URLSearchParams(location.search);

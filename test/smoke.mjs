@@ -20,8 +20,9 @@ function airliner(lat, lon, flight, hex, elDeg = 60) {
 }
 const planeNear = (lat, lon, flight, hex) => ({ now: Date.now(), ac: [airliner(lat, lon, flight, hex)] });
 
-async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '', initScript, viewport } = {}) {
+async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '', initScript, viewport, media } = {}) {
   const page = await browser.newPage(viewport ? { viewport } : {});
+  if (media) await page.emulateMedia(media);
   if (initScript) await page.addInitScript(initScript);
   if (clock) await page.clock.install();
   const errors = [];
@@ -345,6 +346,119 @@ const tests = {
     assert.equal(await page.locator('#sky text', { hasText: /^N$/ }).count(), 0);
     assert.ok(await page.locator('#sky line').count() > 0, 'the grid is drawn');
     assert.equal(await page.locator('#now li, #next li').count(), 0);
+    assert.deepEqual(errors, []);
+  },
+
+  // Motion, accessibility and performance (docs/redesign-2026-11.md §4.4, §5.6, §5.7).
+  async 'the 1 s tick moves planes without rebuilding the chart'(browser) {
+    const { page, errors } = await open(browser, { clock: true });
+    const mark = '#sky [data-hex="a00001"]';
+    await page.waitForSelector(mark);
+    const before = await page.evaluate((sel) => {
+      window.skyMutations = 0;
+      window.skyObserver = new MutationObserver((records) => { window.skyMutations += records.length; });
+      window.skyObserver.observe(document.querySelector('#sky'), { childList: true, subtree: true });
+      // Count the expensive calls the tick must never make.
+      window.costly = { getBBox: 0, measureText: 0, replaceChildren: 0 };
+      for (const [proto, name] of [[SVGGraphicsElement.prototype, 'getBBox'], [CanvasRenderingContext2D.prototype, 'measureText'], [Element.prototype, 'replaceChildren']]) {
+        const original = proto[name];
+        proto[name] = function (...args) { if (this === document.querySelector('#sky') || name !== 'replaceChildren') window.costly[name]++; return original.apply(this, args); };
+      }
+      return document.querySelector(sel).style.transform;
+    }, mark);
+    await page.clock.fastForward(2500);
+    const after = await page.evaluate((sel) => {
+      window.skyMutations += window.skyObserver.takeRecords().length;
+      window.skyObserver.disconnect();
+      return { mutations: window.skyMutations, costly: window.costly, transform: document.querySelector(sel).style.transform };
+    }, mark);
+    assert.equal(after.mutations, 0, 'the tick must not add or remove nodes in #sky');
+    assert.deepEqual(after.costly, { getBBox: 0, measureText: 0, replaceChildren: 0 });
+    assert.match(before, /^translate\([\d.]+px, [\d.]+px\) rotate\(-?\d+deg\)$/);
+    assert.notEqual(after.transform, before, 'the plane must move');
+    assert.equal(await page.evaluate((sel) => getComputedStyle(document.querySelector(sel)).transitionDuration, mark), '1s');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'reduced motion turns off transitions'(browser) {
+    const { page, errors } = await open(browser, { media: { reducedMotion: 'reduce' } });
+    await page.waitForSelector('#sky [data-hex="a00001"]');
+    for (const sel of ['#sky [data-hex="a00001"]', '#sky .ring', '#now button']) {
+      assert.equal(await page.evaluate((s) => getComputedStyle(document.querySelector(s)).transitionDuration, sel), '0s', sel);
+    }
+    assert.deepEqual(errors, []);
+  },
+
+  async 'the selection ring fades in once'(browser) {
+    const { page, errors } = await open(browser);
+    await page.waitForSelector('#sky .ring');
+    const ring = () => page.evaluate(() => {
+      const r = document.querySelector('#sky .ring');
+      return { opacity: r.style.opacity, transition: getComputedStyle(r).transition };
+    });
+    assert.deepEqual(await ring(), { opacity: '1', transition: 'opacity 0.15s ease-out' });
+    assert.deepEqual(errors, []);
+  },
+
+  async 'faint dots are capped at 80, nearest first'(browser) {
+    // 80 low planes to the north and 20 further ones to the south; none can be seen or will be.
+    const crowd = (lat, lon) => ({ now: Date.now(), ac: Array.from({ length: 100 }, (_, i) => {
+      const far = i >= 80, km = (far ? 80 : 40) + i * 0.1;
+      return { ...airliner(lat, lon, `LOW${i}`, `b${String(i).padStart(5, '0')}`), lat: lat + (far ? -km : km) / 111.195, gs: 0 };
+    }) });
+    const { page, errors } = await open(browser, { stanford: crowd, viewport: { width: 1440, height: 900 } });
+    await page.waitForFunction(() => document.querySelectorAll('#sky .dot').length > 0);
+    const xs = await page.evaluate(() => [...document.querySelectorAll('#sky .dot')].map((d) => parseFloat(d.style.transform.slice(10))));
+    const W = await page.evaluate(() => document.querySelector('#sky').viewBox.baseVal.width);
+    assert.equal(xs.length, 80);
+    assert.ok(xs.every((x) => Math.abs(x - W / 2) < W / 8), 'only the 80 nearest (north) planes are drawn');
+    assert.deepEqual(errors, []);
+  },
+
+  async 'the panorama stays under 400 nodes with 60 aircraft'(browser) {
+    const sixty = (lat, lon) => ({ now: Date.now(), ac: Array.from({ length: 60 }, (_, i) => ({
+      ...airliner(lat, lon, `UAL${i}`, `c${String(i).padStart(5, '0')}`, i < 20 ? 15 + i * 3 : 4 + (i % 5)), track: i * 6,
+    })) });
+    const { page, errors } = await open(browser, { stanford: sixty, viewport: { width: 1440, height: 900 } });
+    await page.waitForFunction(() => document.querySelectorAll('#now button').length >= 20);
+    const nodes = await page.evaluate(() => document.querySelectorAll('#sky *').length);
+    assert.ok(nodes <= 400, `${nodes} nodes in #sky`);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'keyboard path, focus ring and labels'(browser) {
+    const { page, errors } = await open(browser, { viewport: { width: 1440, height: 900 } });
+    await page.waitForSelector('#now button[data-hex="a00001"]');
+    assert.equal(await page.locator('#sky [data-hex]:not([tabindex="-1"])').count(), 0, 'plane glyphs are not tab stops');
+    assert.equal(await page.getAttribute('.pano', 'tabindex'), '0');
+    assert.equal(await page.getAttribute('.pano', 'aria-label'), 'Horizon, scroll sideways');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'place');
+    await page.keyboard.press('Tab');
+    const ring = await page.evaluate(() => {
+      const s = getComputedStyle(document.activeElement);
+      return [document.activeElement.className, s.outlineStyle, s.outlineWidth, s.outlineOffset];
+    });
+    assert.deepEqual(ring, ['pano', 'solid', '2px', '2px']);
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.focus), 'now-a00001');
+    assert.match(await page.getAttribute('#now button', 'aria-label'), /^United Airlines 1, visible now, \d+ degrees up, north, /);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'text at 200% causes no horizontal page scroll at 1440 px'(browser) {
+    const { page, errors } = await open(browser, {
+      viewport: { width: 1440, height: 900 },
+      initScript: () => document.addEventListener('DOMContentLoaded', () => {
+        const s = document.createElement('style');
+        s.textContent = 'html { font-size: 200% }';
+        document.head.append(s);
+      }),
+    });
+    await page.waitForSelector('#now button[data-hex="a00001"]');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.head .answer')).fontSize), '80px');
+    const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    assert.ok(sw <= cw, `page is ${sw} px wide in a ${cw} px window`);
     assert.deepEqual(errors, []);
   },
 
