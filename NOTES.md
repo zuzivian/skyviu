@@ -1,7 +1,7 @@
 # skyviu notes
 
-Single-page app (`index.html`) plus two Vercel edge proxies (`api/aircraft.mjs` for adsb.lol,
-`api/orbits.mjs` for CelesTrak). No build step. `package.json` exists only to pin Playwright and
+Single-page app (`index.html`) plus one Vercel edge proxy (`api/aircraft.mjs` for adsb.lol).
+No build step. `package.json` exists only to pin Playwright and
 run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
 
 ## Done
@@ -57,9 +57,11 @@ run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
   - Added browser-free unit tests for sky geometry, visibility and sun position helpers (#41).
   - Showed an error when an aircraft response has no aircraft list (#42).
 
+- 2026-11-18:
+  - Redesign 2/6: removed the camera view, the "Show all in range" toggle, the "Also in the sky"
+    list, the ISS and Tiangong, and `api/orbits.mjs` with its tests (#50).
+
 ## Next
-- The camera view's labels are only reachable by pointing the phone. The new `#now` list is under
-  the camera too, but check it with VoiceOver on a phone.
 - CI runs twice on a PR branch (push and pull_request). Cheap, but `push: branches: [main]`
   would halve it if Nat prefers.
 
@@ -72,7 +74,7 @@ run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
 - Run 3's autopilot container could not resolve registry.npmjs.org; `npm ci --offline` worked
   from its local cache. That cache workaround depends on the environment. For a syntax check, pull the `<script>` out of
   `index.html` into a file and run `node --check` on it (process substitution doesn't work).
-- `render()` rebuilds the head, card, Next and Also lists on every data update (10 s). Anything
+- `render()` rebuilds the head, card, Now and Next lists on every data update (10 s). Anything
   interactive inside them needs a `data-focus` key, or keyboard focus is lost.
-- Between updates only `renderChart()` runs (sky view) or `drawAR()` (camera view). Plane
+- Between updates only `renderChart()` runs. Plane
   visibility (`p.see`) is judged only in `render()`.

@@ -31,7 +31,6 @@ async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford 
   await page.route('**/fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await page.route(`${ORIGIN}/`, (r) => r.fulfill({ contentType: 'text/html', body: html }));
   await page.route(`${ORIGIN}/?*`, (r) => r.fulfill({ contentType: 'text/html', body: html }));
-  await page.route('**/api/orbits', (r) => r.fulfill({ json: { objects: [] } }));
   let stanfordCalls = 0;
   await page.route('**/api/aircraft**', async (r) => {
     const q = new URL(r.request().url()).searchParams;
@@ -111,29 +110,6 @@ const tests = {
     assert.equal(await page.getAttribute('#now button', 'data-hex'), 'a00001');
     // Stale aircraft still count as airborne; both kinds of ground aircraft do not.
     assert.equal(await page.textContent('#status'), 'Live · 1 of 2 planes within 29 miles');
-    assert.deepEqual(errors, []);
-  },
-
-  async 'Show all in range toggles low aircraft on the sky chart'(browser) {
-    const two = (lat, lon) => ({ now: Date.now(), ac: [airliner(lat, lon, 'UAL1', 'a00001', 60), airliner(lat, lon, 'UAL3', 'a00003', 5)] });
-    const { page, errors } = await open(browser, { stanford: two });
-    await page.waitForSelector('#sky [data-hex="a00001"]');
-    assert.equal(await page.getAttribute('#showall', 'aria-pressed'), 'false');
-    assert.equal(await page.textContent('#showall'), 'Show all 2 in range');
-    assert.equal(await page.locator('#sky [data-hex="a00001"]').count(), 1);
-    assert.equal(await page.locator('#sky [data-hex="a00003"]').count(), 0);
-
-    await page.click('#showall');
-    assert.equal(await page.getAttribute('#showall', 'aria-pressed'), 'true');
-    assert.equal(await page.textContent('#showall'), 'Show only the 1 you can see');
-    assert.equal(await page.locator('#sky [data-hex="a00001"]').count(), 1);
-    assert.equal(await page.locator('#sky [data-hex="a00003"]').count(), 1);
-
-    await page.click('#showall');
-    assert.equal(await page.getAttribute('#showall', 'aria-pressed'), 'false');
-    assert.equal(await page.textContent('#showall'), 'Show all 2 in range');
-    assert.equal(await page.locator('#sky [data-hex="a00001"]').count(), 1);
-    assert.equal(await page.locator('#sky [data-hex="a00003"]').count(), 0);
     assert.deepEqual(errors, []);
   },
 
