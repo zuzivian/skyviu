@@ -96,6 +96,16 @@ const tests = {
     assert.deepEqual(errors, []);
   },
 
+  async 'the answer says where to look'(browser) {
+    // The default fixture is placed from the rounded request (37.43, -122.17), which puts it 58°
+    // up from the Main Quad. Place it from the Main Quad itself so it is exactly 60° up, due north.
+    const exact = () => ({ now: Date.now(), ac: [airliner(37.4275, -122.1703, 'UAL1', 'a00001')] });
+    const { page, errors } = await open(browser, { stanford: exact });
+    await page.waitForSelector('#head .answer');
+    assert.match(await page.textContent('#head .answer'), /^Look north, (59|60|61)° up$/);
+    assert.deepEqual(errors, []);
+  },
+
   async 'the horizon puts a plane due north at the centre'(browser) {
     const { page, errors } = await open(browser, { viewport: { width: 1440, height: 900 } });
     const mark = page.locator('#sky [data-hex="a00001"]');
@@ -220,7 +230,6 @@ const tests = {
         },
       });
       await page.waitForSelector(`#now button[data-hex="${hex}"]`);
-      await page.getByText('Flight details', { exact: true }).click();
       const share = page.locator('#card button[data-focus="share"]');
       assert.equal(await share.textContent(), 'Share this plane');
       await share.click();
