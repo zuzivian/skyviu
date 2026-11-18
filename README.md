@@ -30,15 +30,20 @@ Find each name with `grep -n`. In file order:
     the sun; `judge()` decides whether a plane can be seen; `upcoming()` lists the next ones.
   - Data: `load()` fetches `/api/aircraft` and cancels an older request when the place changes;
     `schedule()` starts it and repeats it every `REFRESH_MS`.
-  - Drawing: `render()` runs `renderStatus`, `renderChart`, `renderHead`, `renderCard`,
-    `renderNow` and `renderNext`. `renderChart()` draws the horizon panorama, using the pure
-    `panoX()`/`panoY()` mapping from bearing and elevation.
+  - Drawing: `render()` runs `renderStatus`, `buildChart`, `describeSky`, `renderHead`,
+    `renderCard`, `renderNow`, `renderNext` and `centreSelected`. `buildChart()` makes every node
+    of the horizon panorama, using the pure `panoX()`/`panoY()` mapping from bearing and
+    elevation, and keeps the moving ones in `view.marks`. `moveChart()` moves those nodes with
+    CSS transforms. `textWidth()` measures labels on a canvas, cached by plane and callsign.
+  - Links: `placeURL()` gives the address for a place; `sharePlane()` adds the plane.
   - Setup at the bottom: `setObserver()` switches place and starts loading, then the 1-second
     tick, then the `?at=` and `?plane=` link handling.
 
-**Every 10 s** (each `load()`): `render()` redraws everything, including the head, card, `#now`
-and `#next`. **Every second** (the tick): `updatePositions()` then `renderChart()`, which
-only moves the planes.
+**Every 10 s** (each `load()`), on resize and on selection: `buildChart()` rebuilds the panorama,
+and `render()` also redraws the head, card, `#now` and `#next`. **Every second** (the tick):
+`updatePositions()` then `moveChart()`, which only sets each plane's CSS `transform` (they glide
+with `transition: transform 1s linear`). It never adds nodes, measures text or calls `getBBox()`.
+Under `prefers-reduced-motion` the transitions are off and the planes jump once a second.
 
 Anything interactive inside what `render()` rebuilds needs a `data-focus` key, or keyboard focus
 is lost. See the gotchas in `NOTES.md`.

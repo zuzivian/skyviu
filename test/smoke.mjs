@@ -462,6 +462,12 @@ const tests = {
     assert.deepEqual(errors, []);
   },
 
+  async 'index.html stays within its size budget and keeps --faint off text'() {
+    const bytes = Buffer.byteLength(html);
+    assert.ok(bytes <= 61440, `index.html is ${bytes} bytes`);
+    assert.doesNotMatch(html, /color:\s*var\(--faint\)/);
+  },
+
   async 'without JavaScript the page says it needs it'(browser) {
     const context = await browser.newContext({ javaScriptEnabled: false });
     const page = await context.newPage();

@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=B612+Mono&display=swap" rel="stylesheet">
 <style>
-/* Design tokens (docs/redesign-2026-11.md §4). Light by day, dark at night or when the OS asks.
-   Every colour on the page comes from here; JS-drawn SVG uses var(--token) too. */
+/* Design tokens (docs/redesign-2026-11.md §4): light by day, dark at night or when the OS asks.
+   JS-drawn SVG uses var(--token) too. */
 :root {
   color-scheme: light;
   --bg: #F3F5F7;
@@ -69,8 +69,7 @@ a:hover { text-decoration-color: currentColor; }
 .status.error { color: var(--error); }
 /* Live and error carry an 8px square before the text; the colour is in the word too. */
 .status.live::before, .status.error::before {
-  content: ''; display: inline-block; width: 8px; height: 8px; border-radius: var(--r0);
-  margin-right: var(--s2); background: var(--visible); vertical-align: 0;
+  content: ''; display: inline-block; width: 8px; height: 8px; margin-right: var(--s2); background: var(--visible);
 }
 .status.error::before { background: var(--error); }
 
@@ -94,7 +93,7 @@ select:hover, button:hover { border-color: var(--muted); }
   padding: 0 max(var(--gutter), calc((100% - 1600px) / 2 + var(--gutter)));
   background: var(--raised); border-bottom: 1px solid var(--line);
 }
-.mark { font: 700 var(--fs-body)/var(--lh-body) var(--font-text); }
+.mark { font-weight: 700; }
 .bar select { flex: 0 1 auto; min-width: 0; max-width: 360px; font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
 .bar .status { margin: 0 0 0 auto; min-width: 0; text-align: right; }
 main { max-width: 1600px; margin: 0 auto; padding: var(--s5) var(--gutter) var(--s7); }
@@ -114,12 +113,12 @@ footer { margin: 0; padding: var(--s4) max(var(--gutter), calc((100% - 1600px) /
 .head .sub { font: 400 var(--fs-lead)/var(--lh-lead) var(--font-text); color: var(--muted); margin: 0; }
 .head .sub .label { white-space: nowrap; }
 
-/* The horizon panorama (§5.3). On a phone the strip is 960px wide and scrolls sideways. */
+/* The panorama (§5.3). On a phone the 960px strip scrolls sideways. */
 .pano { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
 svg#sky { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
 #sky text { font: 400 11px/1 var(--font-text); }
-#sky .t-lab { font: 400 12px/1 var(--font-data); letter-spacing: .08em; text-transform: uppercase; }
-#sky .t-cmp { font: 400 12px/1 var(--font-data); letter-spacing: 1px; }
+#sky .t-lab, #sky .t-cmp { font: 400 12px/1 var(--font-data); letter-spacing: .08em; }
+#sky .t-lab { text-transform: uppercase; }
 #sky .t-cs { font-size: 13px; }
 #sky .t-cs.sel { font-weight: 700; }
 /* Planes glide between the 1 s ticks; a new selection ring fades in. */
@@ -155,7 +154,7 @@ ol.rows button[aria-current="true"] .who { font-weight: 700; }
 .when, .where { font: 400 var(--fs-data)/var(--lh-data) var(--font-data); }
 .when { color: var(--visible); }
 #next .when { color: var(--soon); }
-.who { font: 400 var(--fs-body)/var(--lh-body) var(--font-text); min-width: 0; overflow-wrap: anywhere; }
+.who { min-width: 0; overflow-wrap: anywhere; }
 .where { color: var(--muted); white-space: nowrap; }
 .timeline .note { margin: var(--s3) 0 0; }
 @media (max-width: 639px) {
@@ -167,13 +166,12 @@ ol.rows button[aria-current="true"] .who { font-weight: 700; }
 
 /* This plane, then how it decides, as plain sections. */
 .card dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s2) var(--s4); align-items: baseline; margin: 0 0 var(--s4); }
-.card dd { margin: 0; font: 400 var(--fs-body)/var(--lh-body) var(--font-text); }
+.card dd { margin: 0; }
 @media (max-width: 639px) {
   .card dl { grid-template-columns: 1fr; row-gap: 0; }
   .card dd { margin-bottom: var(--s3); }
 }
 .how { margin-top: var(--s6); }
-/* The copy keeps its two bulleted lists. */
 .how ul { margin: 0 0 var(--s3); padding-left: var(--s5); }
 .how li { margin-bottom: var(--s1); }
 </style>
@@ -252,26 +250,32 @@ const AIRLINES = {
   SKW: 'SkyWest Airlines', SWA: 'Southwest Airlines', SWR: 'Swiss', THY: 'Turkish Airlines', UAE: 'Emirates',
   UAL: 'United Airlines', UPS: 'UPS Airlines', VIR: 'Virgin Atlantic', VOI: 'Volaris', WJA: 'WestJet',
 };
-// ICAO aircraft type designators.
-const TYPES = {
-  A19N: 'Airbus A319neo', A20N: 'Airbus A320neo', A21N: 'Airbus A321neo', A319: 'Airbus A319', A320: 'Airbus A320',
-  A321: 'Airbus A321', A332: 'Airbus A330-200', A333: 'Airbus A330-300', A339: 'Airbus A330-900', A359: 'Airbus A350-900',
-  A35K: 'Airbus A350-1000', A388: 'Airbus A380', BCS1: 'Airbus A220-100', BCS3: 'Airbus A220-300',
-  B712: 'Boeing 717', B737: 'Boeing 737-700', B738: 'Boeing 737-800', B739: 'Boeing 737-900', B37M: 'Boeing 737 MAX 7',
-  B38M: 'Boeing 737 MAX 8', B39M: 'Boeing 737 MAX 9', B3XM: 'Boeing 737 MAX 10', B744: 'Boeing 747-400', B748: 'Boeing 747-8',
-  B752: 'Boeing 757-200', B753: 'Boeing 757-300', B763: 'Boeing 767-300', B764: 'Boeing 767-400', B772: 'Boeing 777-200',
-  B77L: 'Boeing 777-200LR or 777F', B77W: 'Boeing 777-300ER', B788: 'Boeing 787-8', B789: 'Boeing 787-9', B78X: 'Boeing 787-10',
-  CRJ2: 'Bombardier CRJ200', CRJ7: 'Bombardier CRJ700', CRJ9: 'Bombardier CRJ900', DH8D: 'De Havilland Dash 8-400',
-  AT76: 'ATR 72-600', E170: 'Embraer 170', E75L: 'Embraer 175', E75S: 'Embraer 175', E190: 'Embraer 190', E290: 'Embraer 190-E2',
-  C152: 'Cessna 152', C172: 'Cessna 172 Skyhawk', C182: 'Cessna 182 Skylane', C208: 'Cessna 208 Caravan',
-  C25A: 'Cessna Citation CJ2', C25B: 'Cessna Citation CJ3', C56X: 'Cessna Citation Excel', C68A: 'Cessna Citation Latitude',
-  C700: 'Cessna Citation Longitude', CL35: 'Bombardier Challenger 350', CL60: 'Bombardier Challenger 600 series',
-  GLF4: 'Gulfstream IV', GLF5: 'Gulfstream V', GLF6: 'Gulfstream G650', GL5T: 'Bombardier Global 5000', GLEX: 'Bombardier Global Express',
-  E50P: 'Embraer Phenom 100', E55P: 'Embraer Phenom 300', PC12: 'Pilatus PC-12', PC24: 'Pilatus PC-24',
-  SR20: 'Cirrus SR20', SR22: 'Cirrus SR22', SF50: 'Cirrus Vision Jet', P28A: 'Piper PA-28', PA46: 'Piper PA-46',
-  BE20: 'Beechcraft King Air 200', BE36: 'Beechcraft Bonanza', DA40: 'Diamond DA40', DA42: 'Diamond DA42',
-  R22: 'Robinson R22', R44: 'Robinson R44', EC35: 'Airbus H135', AS50: 'Airbus AS350', B06: 'Bell 206', B407: 'Bell 407',
-};
+// ICAO aircraft type designators, by maker: "code model, code model".
+const TYPES = {};
+Object.entries({
+  Airbus: 'A19N A319neo, A20N A320neo, A21N A321neo, A319 A319, A320 A320, A321 A321, A332 A330-200, ' +
+    'A333 A330-300, A339 A330-900, A359 A350-900, A35K A350-1000, A388 A380, BCS1 A220-100, ' +
+    'BCS3 A220-300, EC35 H135, AS50 AS350',
+  Boeing: 'B712 717, B737 737-700, B738 737-800, B739 737-900, B37M 737 MAX 7, B38M 737 MAX 8, ' +
+    'B39M 737 MAX 9, B3XM 737 MAX 10, B744 747-400, B748 747-8, B752 757-200, B753 757-300, ' +
+    'B763 767-300, B764 767-400, B772 777-200, B77L 777-200LR or 777F, B77W 777-300ER, B788 787-8, ' +
+    'B789 787-9, B78X 787-10',
+  Bombardier: 'CRJ2 CRJ200, CRJ7 CRJ700, CRJ9 CRJ900, CL35 Challenger 350, ' +
+    'CL60 Challenger 600 series, GL5T Global 5000, GLEX Global Express',
+  'De Havilland': 'DH8D Dash 8-400',
+  ATR: 'AT76 72-600',
+  Embraer: 'E170 170, E75L 175, E75S 175, E190 190, E290 190-E2, E50P Phenom 100, E55P Phenom 300',
+  Cessna: 'C152 152, C172 172 Skyhawk, C182 182 Skylane, C208 208 Caravan, C25A Citation CJ2, ' +
+    'C25B Citation CJ3, C56X Citation Excel, C68A Citation Latitude, C700 Citation Longitude',
+  Gulfstream: 'GLF4 IV, GLF5 V, GLF6 G650',
+  Pilatus: 'PC12 PC-12, PC24 PC-24',
+  Cirrus: 'SR20 SR20, SR22 SR22, SF50 Vision Jet',
+  Piper: 'P28A PA-28, PA46 PA-46',
+  Beechcraft: 'BE20 King Air 200, BE36 Bonanza',
+  Diamond: 'DA40 DA40, DA42 DA42',
+  Robinson: 'R22 R22, R44 R44',
+  Bell: 'B06 206, B407 407',
+}).forEach(([maker, list]) => list.split(', ').forEach((e) => { const i = e.indexOf(' '); TYPES[e.slice(0, i)] = `${maker} ${e.slice(i + 1)}`; }));
 const NM = 25;               // query radius, nautical miles
 const REFRESH_MS = 10000;
 const STALE_S = 60;          // older positions are gray and not moved forward
@@ -282,7 +286,7 @@ const EARTH_M = 6371008.8;
 const SOUND_MS = 340;
 const M_PER_MI = 1609.344;
 
-// What a person on the ground can pick out. These cutoffs are estimates, not measurements.
+// What a person on the ground can pick out: estimates, not measurements.
 const MIN_EL = 10;           // degrees; lower than this is usually behind trees and roofs
 const MIN_ARCMIN = 5;        // by day, the smallest apparent wingspan counted as spottable
 const NIGHT_MI = 25;         // at night, how far lights count; small planes use NIGHT_SMALL_MI
@@ -346,13 +350,9 @@ function elevation(dM, hM) {
   const drop = dM * dM / (2 * EARTH_M);
   return deg(Math.atan2(hM - drop, dM));
 }
-function compassWord(b) {
-  const words = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
-  return words[Math.round(b / 45) % 8];
-}
-function compassShort(b) {
-  return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(b / 45) % 8];
-}
+// Eight points are every other one of the sixteen.
+function compassWord(b) { return compass16(Math.round(b / 45) * 45); }
+function compassShort(b) { return compass16Short(Math.round(b / 45) * 45); }
 function compass16(b) {
   return ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast',
     'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'][Math.round(b / 22.5) % 16];
@@ -439,7 +439,7 @@ function sight(el, slant, brg, cat, sun) {
   const out = (why) => ({ ok: false, arcmin, why });
   if (el < MIN_EL) return out(`Too low. Under ${MIN_EL}° up, it's usually behind trees and roofs.`);
   if (sun.el > 0 && apart(brg, el, sun.az, sun.el) < SUN_CLEAR) return out('Lost in the sun\'s glare.');
-  // After civil twilight the sky is dark enough that lights carry further than shapes.
+  // After civil twilight, lights carry further than shapes.
   if (sun.el < -6) {
     const mi = SMALL.has(cat) || !SPAN_M[cat] ? NIGHT_SMALL_MI : NIGHT_MI;
     return slant <= mi * M_PER_MI ? { ok: true, arcmin, lights: true } : out('Too far for its lights to stand out.');
@@ -537,7 +537,7 @@ function render() {
   document.documentElement.dataset.theme = (matchMedia('(prefers-color-scheme: dark)').matches || state.sun.el < -6) ? 'dark' : 'light';
   state.aircraft.forEach((p) => { p.see = judge(p); });
   state.next = upcoming();
-  // A shared link names a plane; pick it once the first update arrives.
+  // Pick a plane named in a shared link once data arrives.
   if (state.wanted && state.updatedAt) {
     if (state.aircraft.some((a) => a.hex === state.wanted)) { state.selected = state.wanted; state.picked = true; }
     else state.notice = 'The plane in that link has left the area.';
@@ -589,6 +589,13 @@ function renderStatus() {
     (state.notice ? `. ${state.notice}` : ''));
 }
 
+// An HTML element with a class and text.
+function make(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
 function svgEl(tag, attrs, text) {
   const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -611,7 +618,7 @@ function textWidth(s, size, data, weight = 400, spacing = 0, id = '') {
 }
 const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 const fix = (n) => n.toFixed(1);
-// Signed bearing difference in -180..180, so motion across south doesn't jump.
+// Signed bearing difference, -180..180, so crossing south doesn't jump.
 const turn = (d) => (d % 360 + 540) % 360 - 180;
 // CSS transforms animate; the SVG transform attribute doesn't.
 const place = (x, y, a = 0) => `translate(${fix(x)}px, ${fix(y)}px) rotate(${a.toFixed(0)}deg)`;
@@ -657,20 +664,20 @@ function buildChart() {
   g.append(svgEl('rect', { x: 0, y: fix(Y(10)), width: W, height: fix(bottom - Y(10)), fill: 'var(--below)' }));
   [[10, '10° · tree line'], [30, '30°'], [60, '60°']].forEach(([e, label]) => {
     const y = crisp(Y(e));
-    g.append(svgEl('line', { x1: 0, y1: y, x2: W, y2: y, stroke: line, 'stroke-width': 1, ...(e === 10 ? { 'stroke-dasharray': '2 4' } : {}) }));
+    g.append(svgEl('line', { x1: 0, y1: y, x2: W, y2: y, stroke: line, ...(e === 10 ? { 'stroke-dasharray': '2 4' } : {}) }));
     g.append(svgEl('text', { x: 4, y: fix(Y(e) - 6), fill: muted, class: 't-lab' }, label));
   });
   g.append(svgEl('text', { x: 4, y: top - 8, fill: muted, class: 't-lab' }, 'overhead'));   // uppercased by CSS
-  g.append(svgEl('line', { x1: 0, y1: crisp(bottom), x2: W, y2: crisp(bottom), stroke: muted, 'stroke-width': 1 }));
+  g.append(svgEl('line', { x1: 0, y1: crisp(bottom), x2: W, y2: crisp(bottom), stroke: muted }));
   // No data ever: the grid alone.
-  stale();
+  fadeStale();
   if (state.error && !state.updatedAt) return;
 
-  // Compass ribbon: a tick every 15°, longer every 45°, with a letter under each long tick.
+  // Compass ribbon: a tick every 15°, a longer one and a letter every 45°.
   for (let b = 0; b < 360; b += 15) {
     const major = b % 45 === 0;
     xsOf(X(b)).forEach((x) => {
-      g.append(svgEl('line', { x1: fix(x), y1: bottom, x2: fix(x), y2: bottom + (major ? 10 : 5), stroke: muted, 'stroke-width': 1 }));
+      g.append(svgEl('line', { x1: fix(x), y1: bottom, x2: fix(x), y2: bottom + (major ? 10 : 5), stroke: muted }));
       if (!major) return;
       const letter = compassShort(b);
       // Keep the S at each edge inside the picture.
@@ -682,7 +689,7 @@ function buildChart() {
     });
   }
 
-  // Landmarks on the horizon, so you can face the right way without a compass.
+  // Landmarks, to face the right way without a compass.
   const marks = [];
   LANDMARKS.forEach(([name, lat, lon]) => {
     const { d, brg } = geo(state.obs, lat, lon);
@@ -700,7 +707,7 @@ function buildChart() {
   if (state.sun.el > 0) {
     const y = Y(state.sun.el);
     xsOf(X(state.sun.az)).forEach((x) => {
-      g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: fix(SUN_CLEAR * scale), fill: 'none', stroke: 'var(--sun)', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.4 }));
+      g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: fix(SUN_CLEAR * scale), fill: 'none', stroke: 'var(--sun)', 'stroke-dasharray': '3 3', opacity: 0.4 }));
       g.append(svgEl('circle', { cx: fix(x), cy: fix(y), r: 8, fill: 'var(--sun)' }));
     });
   }
@@ -732,7 +739,7 @@ function buildChart() {
   };
   const soon = new Map(state.next.map((n) => [n.p.hex, n]));
   const air = state.aircraft.filter((p) => !p.onGround);
-  // Faint dots for the ones you can't see, at most 80, nearest first.
+  // Faint dots for planes you can't see: the 80 nearest.
   air.filter((p) => !p.see.ok && !soon.has(p.hex) && p.hex !== state.selected).sort((a, b) => a.d - b.d).slice(0, 80).forEach((p) => {
     xsOf(X(p.brg)).forEach((x) => add(svgEl('circle', { r: 2.5, fill: 'var(--faint)', class: 'dot' }), p, 'dot', x, Y(p.el), p.brg));
   });
@@ -757,7 +764,7 @@ function buildChart() {
       let path = null;
       if (m.kind === 'soon') {
         // A dotted line from where it is now to where it comes into view.
-        path = svgEl('line', { x1: fix(x + turn(m.p.brg - m.brg) * scale), y1: fix(Y(m.p.el)), x2: fix(x), y2: fix(y), stroke: 'var(--soon)', 'stroke-width': 1, 'stroke-dasharray': '1 3' });
+        path = svgEl('line', { x1: fix(x + turn(m.p.brg - m.brg) * scale), y1: fix(Y(m.p.el)), x2: fix(x), y2: fix(y), stroke: 'var(--soon)', 'stroke-dasharray': '1 3' });
         planes.append(path);
       }
       const mark = svgEl('g', { 'data-hex': m.p.hex, tabindex: -1 });
@@ -812,13 +819,13 @@ function buildChart() {
 }
 
 // After 30 s without fresh data the planes fade; the frame stays.
-const stale = () => pano.classList.toggle('stale', !!(state.error && state.updatedAt && Date.now() - state.updatedAt > 30000));
+const fadeStale = () => pano.classList.toggle('stale', !!(state.error && state.updatedAt && Date.now() - state.updatedAt > 30000));
 
 // The 1 s tick: transforms and line ends only; no new nodes, no measuring. A soon plane waits
 // at its entry point while its line follows the plane.
 function moveChart() {
   if (!view) return;
-  stale();
+  fadeStale();
   const { Y, scale } = view;
   view.marks.forEach((m) => {
     const p = m.p, dx = turn(p.brg - m.brg) * scale;
@@ -859,30 +866,24 @@ function renderHead() {
   const p = state.updatedAt ? state.aircraft.find((a) => a.hex === state.selected) : null;
   $('more').hidden = !p;
   head.replaceChildren();
-  const para = (cls) => { const e = document.createElement('p'); e.className = cls; head.append(e); return e; };
+  const para = (cls, text) => head.appendChild(make('p', cls, text));
   if (!state.updatedAt) {
-    para('answer').textContent = state.error ? 'Can\'t reach the plane data right now.' : 'Listening for planes…';
+    para('answer', state.error ? 'Can\'t reach the plane data right now.' : 'Listening for planes…');
     return;
   }
   if (!p) {
     const air = state.aircraft.filter((a) => !a.onGround).length;
-    para('answer').textContent = air
+    para('answer', air
       ? `Quiet sky. ${air} plane${air === 1 ? '' : 's'} in range, none high or close enough to see.`
-      : 'No planes in range right now.';
+      : 'No planes in range right now.');
     return;
   }
   const n = !seeable().length && state.next.find((s) => s.p.hex === p.hex);
-  para('answer').textContent = n
+  para('answer', n
     ? `Nothing to see this second. Next: ${nameOf(n.p)} in ${minutes(n.t)} min, ${Math.round(n.el)}° up ${compass16(n.brg)}.`
-    : answerText(p);
-  const sub = para('sub');
-  sub.textContent = [nameOf(p), typeOf(p), altitudeText(p)].join(' · ');
-  if (p.see.ok) {
-    const g = document.createElement('span');
-    g.className = 'label';
-    g.textContent = grade(p.see);
-    sub.append(' · ', g);
-  }
+    : answerText(p));
+  const sub = para('sub', [nameOf(p), typeOf(p), altitudeText(p)].join(' · '));
+  if (p.see.ok) sub.append(' · ', make('span', 'label', grade(p.see)));
 }
 // Where to look for a plane you can see now, or for one coming into view; otherwise why not.
 function answerText(p) {
@@ -921,24 +922,24 @@ function renderCard() {
   if (p.raw.emergency && p.raw.emergency !== 'none') rows.push(['Emergency', p.raw.emergency]);
   const note = whoNote(p);
   if (note) rows.push(['Note', note]);
-  const dl = document.createElement('dl');
-  rows.forEach(([k, v]) => {
-    const dt = document.createElement('dt'); dt.className = 'label'; dt.textContent = k;
-    const dd = document.createElement('dd'); dd.textContent = v;
-    dl.append(dt, dd);
-  });
-  const share = document.createElement('button');
+  const dl = make('dl');
+  rows.forEach(([k, v]) => dl.append(make('dt', 'label', k), make('dd', '', v)));
+  const share = make('button', '', 'Share this plane');
   share.type = 'button';
-  share.textContent = 'Share this plane';
   share.dataset.focus = 'share';
   share.addEventListener('click', () => sharePlane(p, share));
   card.append(dl, share);
 }
 
+// This page's address for a place: listed places go in it, the default and "My location" don't.
+function placeURL(obs) {
+  const url = new URL(location.pathname, location.origin);
+  if (obs.id !== 'me' && obs.id !== PLACES[0].id) url.searchParams.set('at', obs.id);
+  return url;
+}
 // A link to this place with this plane picked. "My location" never goes in a link.
 async function sharePlane(p, btn) {
-  const url = new URL(location.pathname, location.origin);
-  if (state.obs.id !== 'me' && state.obs.id !== PLACES[0].id) url.searchParams.set('at', state.obs.id);
+  const url = placeURL(state.obs);
   url.searchParams.set('plane', p.hex);
   try {
     if (navigator.share) { await navigator.share({ title: nameOf(p), text: `${nameOf(p)}, ${typeOf(p)}. Look up now.`, url: url.href }); return; }
@@ -971,8 +972,8 @@ function upcoming() {
 
 // "In your sky": visible, then soon planes, as buttons, so picking one needs no pointer.
 function timelineRow(p, kind, { t, el, brg }) {
-  const li = document.createElement('li');
-  const b = document.createElement('button');
+  const li = make('li');
+  const b = make('button');
   b.type = 'button';
   b.dataset.hex = p.hex;
   b.dataset.focus = `${kind}-${p.hex}`;
@@ -983,7 +984,7 @@ function timelineRow(p, kind, { t, el, brg }) {
     ? `${name}, visible now, ${Math.round(el)} degrees up, ${compass16(brg)}, ` +
       (g === 'LIGHTS' ? 'look for its lights' : `${g.toLowerCase()} to spot`)
     : `${name}, comes into view in ${minutes(t)} minutes, ${Math.round(el)} degrees up, ${compass16(brg)}`);
-  const cell = (cls, text) => { const e = document.createElement('span'); e.className = cls; e.textContent = text; b.append(e); };
+  const cell = (cls, text) => b.append(make('span', cls, text));
   cell('when', kind === 'now' ? 'NOW' : `${minutes(t)} MIN`);
   cell('who', name);
   cell('where', `${Math.round(el)}° ${compass16Short(brg)}`);
@@ -991,14 +992,8 @@ function timelineRow(p, kind, { t, el, brg }) {
   li.append(b);
   return li;
 }
-function emptyRow(text) {
-  const li = document.createElement('li');
-  li.className = 'label';
-  li.textContent = text;
-  return li;
-}
 // Waiting before the first data; empty if it never came.
-const emptyRows = (text) => (text && !(state.error && !state.updatedAt) ? [emptyRow(text)] : []);
+const emptyRows = (text) => (text && !(state.error && !state.updatedAt) ? [make('li', 'label', text)] : []);
 function renderNow() {
   const ol = $('now');
   const list = seeable().sort(byEase);
@@ -1014,7 +1009,6 @@ function renderNext() {
 }
 
 // ---------- the sun ----------
-// Small vector helpers for towardSun().
 const norm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 const mix = (a, b, k) => norm([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]);
 const wrap = (d) => ((d % 360) + 360) % 360;
@@ -1062,7 +1056,7 @@ function orbit(N, i, w, a, e, M) {
     r * sind(v + w) * sind(i),
   ];
 }
-// Usually brightest first, so they get a label when names crowd.
+// Brightest first, so they get a label when names crowd.
 const PLANETS = {
   Venus: (d) => [76.6799 + 2.46590e-5 * d, 3.3946 + 2.75e-8 * d, 54.8910 + 1.38374e-5 * d, 0.723330, 0.006773 - 1.302e-9 * d, 48.0052 + 1.6021302244 * d],
   Jupiter: (d) => [100.4542 + 2.76854e-5 * d, 1.3030 - 1.557e-7 * d, 273.8777 + 1.64505e-5 * d, 5.20256, 0.048498 + 4.469e-9 * d, 19.8950 + 0.0830853001 * d],
@@ -1088,7 +1082,6 @@ function sunEcl(d) {
   const lon = deg(Math.atan2(yv, xv)) + w, r = Math.hypot(xv, yv);
   return { x: r * cosd(lon), y: r * sind(lon), lon: wrap(lon), M };
 }
-// Where each planet is in the observer's sky.
 function planetsAt(date, lat, lon) {
   const d = daysJ2000(date), sun = sunEcl(d);
   const Mj = wrap(19.8950 + 0.0830853001 * d), Ms = wrap(316.9670 + 0.0334442282 * d);
@@ -1145,7 +1138,7 @@ function bodyWhy(b, sun) {
   // Venus shows in twilight; the other planets need a dark sky.
   return sun.el > (b.name === 'Venus' ? 0 : -6) ? 'The sky is too bright.' : '';
 }
-// The Moon and planets at a moment, each with a yes or no for the eye.
+// The Moon and planets, each with a yes or no for the eye.
 function skyBodies(date) {
   const { lat, lon } = state.obs;
   const sun = sunAt(date, lat, lon);
@@ -1188,7 +1181,7 @@ svg.addEventListener('click', (e) => {
 });
 ['now', 'next'].forEach((id) => $(id).addEventListener('click', (e) => {
   const b = e.target.closest('button[data-hex]');
-  // Bring the answer into view, then select: render() centres the panorama on the plane.
+  // Show the answer, then select; render() centres the panorama on the plane.
   if (b) { $('title').scrollIntoView({ block: 'start' }); select(b.dataset.hex); }
 }));
 
@@ -1213,10 +1206,7 @@ function setObserver(obs) {
   state.selected = null;
   state.picked = false;
   state.notice = '';
-  // Keep the address shareable: listed places go in it, "My location" never does.
-  const url = new URL(location.pathname, location.origin);
-  if (obs.id !== 'me' && obs.id !== PLACES[0].id) url.searchParams.set('at', obs.id);
-  history.replaceState(null, '', url);
+  history.replaceState(null, '', placeURL(obs));
   state.aircraft = [];
   state.updatedAt = null;
   state.error = '';
@@ -1227,7 +1217,7 @@ function setObserver(obs) {
 
 document.addEventListener('visibilitychange', schedule);
 
-// Between updates, move the planes along every second.
+// Between updates, the planes glide on every second.
 setInterval(() => {
   if (document.visibilityState === 'visible' && state.aircraft.length) {
     updatePositions(Date.now());

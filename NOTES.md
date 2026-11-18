@@ -62,6 +62,12 @@ run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
     list, the ISS and Tiangong, and `api/orbits.mjs` with its tests (#50).
   - Redesign 3/6: the 360° horizon panorama (`panoX()`, `panoY()`) replaces the polar sky chart;
     plane trails, the 3-minute path ahead and `LABELS` are gone (#51).
+  - Redesign 6/6: planes glide. `renderChart()` is split into `buildChart()` (every node, on
+    render, resize and selection) and `moveChart()` (CSS transforms only, on the 1 s tick).
+    Faint dots are capped at the 80 nearest, the selection ring fades in, hover and focus fade
+    over 120 ms, and reduced motion turns every transition off. Type sizes are rem, so 200% text
+    works. `index.html` is 61,289 bytes raw (22,502 gzip): the script and style bodies lost one
+    indent level, `TYPES` is grouped by maker, and comments were shortened (#54).
 
 ## Next
 - CI runs twice on a PR branch (push and pull_request). Cheap, but `push: branches: [main]`
@@ -78,5 +84,6 @@ run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
   `index.html` into a file and run `node --check` on it (process substitution doesn't work).
 - `render()` rebuilds the head, card, Now and Next lists on every data update (10 s). Anything
   interactive inside them needs a `data-focus` key, or keyboard focus is lost.
-- Between updates only `renderChart()` runs. Plane
-  visibility (`p.see`) is judged only in `render()`.
+- Between updates only `moveChart()` runs: it moves what `buildChart()` made and must not add
+  nodes or measure text (a smoke test checks). Plane visibility (`p.see`) is judged only in
+  `render()`. A plane that crosses the S edge between updates can leave the strip until the next one.
