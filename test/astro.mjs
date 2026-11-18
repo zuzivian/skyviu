@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const functionNames = ['geo', 'project', 'elevation', 'compassWord', 'compassShort', 'apart', 'sight', 'sunAt'];
+const functionNames = ['geo', 'project', 'elevation', 'compassWord', 'compassShort', 'apart', 'sight', 'sunAt',
+  'panoY', 'panoX', 'compass16', 'compass16Short', 'grade', 'glyphSize'];
 const constantNames = ['EARTH_M', 'MIN_EL', 'MIN_ARCMIN', 'NIGHT_MI', 'NIGHT_SMALL_MI', 'SUN_CLEAR', 'M_PER_MI', 'ARCMIN_PER_RAD', 'SPAN_M', 'SMALL'];
 
 // These helpers have balanced braces (including their template interpolations).
@@ -42,6 +43,7 @@ let helpers;
 try { helpers = loadHelpers(); }
 catch (e) { console.log(`FAIL load helpers: ${e.message}`); process.exit(1); }
 const { geo, project, elevation, compassWord, compassShort, apart, sight, sunAt,
+  panoY, panoX, compass16, compass16Short, grade, glyphSize,
   MIN_EL, MIN_ARCMIN, NIGHT_MI, NIGHT_SMALL_MI, SUN_CLEAR, M_PER_MI,
   ARCMIN_PER_RAD, SPAN_M, SMALL } = helpers;
 const near = (actual, expected, tolerance) => {
@@ -144,6 +146,47 @@ const tests = {
   'sunAt: equatorial equinox noon and midnight'() {
     assert.ok(sunAt(new Date('2026-03-20T12:07:00Z'), 0, 0).el > 89);
     assert.ok(sunAt(new Date('2026-03-20T00:07:00Z'), 0, 0).el < -89);
+  },
+  'panoY: elevation stops, clamped to the horizon and overhead'() {
+    assert.equal(panoY(0, 0, 100), 100);
+    assert.equal(panoY(10, 0, 100), 85);
+    assert.equal(panoY(30, 0, 100), 45);
+    assert.equal(panoY(90, 0, 100), 0);
+    assert.equal(panoY(-5, 0, 100), 100);
+    near(panoY(60, 0, 100), 15, 1e-9);
+    near(panoY(20, 24, 320), 320 - 0.35 * 296, 1e-9);
+    assert.equal(panoY(120, 24, 320), 24);
+  },
+  'panoX: north in the middle, east right, south at the edges'() {
+    assert.equal(panoX(0, 360, false), 180);
+    assert.equal(panoX(180, 360, false), 0);
+    assert.equal(panoX(90, 360, false), 270);
+    near(panoX(270, 1376, false), 1376 / 4, 1e-9);
+    assert.equal(panoX(0, 960, true), 48 + 180 * 2.4);
+    assert.equal(panoX(180, 960, true), 48);
+    near(panoX(90, 960, true), 48 + 270 * 2.4, 1e-9);
+  },
+  'compass16 and compass16Short: sixteen points and north wraparound'() {
+    assert.equal(compass16(337.5), 'north-northwest');
+    assert.equal(compass16Short(22.5), 'NNE');
+    assert.equal(compass16(0), 'north');
+    assert.equal(compass16(359), 'north');
+    assert.equal(compass16(157.5), 'south-southeast');
+    assert.equal(compass16Short(247.5), 'WSW');
+    assert.equal(compass16Short(359), 'N');
+  },
+  'grade: lights, easy, fair and hard'() {
+    assert.equal(grade({ arcmin: 20 }), 'EASY');
+    assert.equal(grade({ arcmin: 10 }), 'FAIR');
+    assert.equal(grade({ arcmin: 6 }), 'HARD');
+    assert.equal(grade({ arcmin: 3, lights: true }), 'LIGHTS');
+    assert.equal(grade({ arcmin: 15 }), 'EASY');
+    assert.equal(grade({ arcmin: 8 }), 'FAIR');
+  },
+  'glyphSize: clamped between 14 and 28 px'() {
+    assert.equal(glyphSize(0), 14);
+    assert.equal(glyphSize(10), 18);
+    assert.equal(glyphSize(100), 28);
   },
 };
 

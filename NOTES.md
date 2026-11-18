@@ -60,6 +60,8 @@ run the proxy and smoke tests (`npm test`); CI runs them on every push and PR.
 - 2026-11-18:
   - Redesign 2/6: removed the camera view, the "Show all in range" toggle, the "Also in the sky"
     list, the ISS and Tiangong, and `api/orbits.mjs` with its tests (#50).
+  - Redesign 3/6: the 360° horizon panorama (`panoX()`, `panoY()`) replaces the polar sky chart;
+    plane trails, the 3-minute path ahead and `LABELS` are gone (#51).
 
 ## Next
 - CI runs twice on a PR branch (push and pull_request). Cheap, but `push: branches: [main]`

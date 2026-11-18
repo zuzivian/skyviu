@@ -20,8 +20,8 @@ function airliner(lat, lon, flight, hex, elDeg = 60) {
 }
 const planeNear = (lat, lon, flight, hex) => ({ now: Date.now(), ac: [airliner(lat, lon, flight, hex)] });
 
-async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '', initScript } = {}) {
-  const page = await browser.newPage();
+async function open(browser, { holdFirstStanford = 0, holdSjc = 0, failStanford = () => false, clock = false, stanford = planeNear, query = '', initScript, viewport } = {}) {
+  const page = await browser.newPage(viewport ? { viewport } : {});
   if (initScript) await page.addInitScript(initScript);
   if (clock) await page.clock.install();
   const errors = [];
@@ -93,6 +93,17 @@ const tests = {
     const { page, errors } = await open(browser);
     await page.waitForFunction(() => /1 plane you can see from Stanford/.test(document.querySelector('#title').textContent));
     assert.match(await page.textContent('#head'), /United Airlines 1/);
+    assert.deepEqual(errors, []);
+  },
+
+  async 'the horizon puts a plane due north at the centre'(browser) {
+    const { page, errors } = await open(browser, { viewport: { width: 1440, height: 900 } });
+    const mark = page.locator('#sky [data-hex="a00001"]');
+    await mark.waitFor();
+    const box = await mark.boundingBox();
+    const sky = await page.locator('#sky').boundingBox();
+    const dx = Math.abs((box.x + box.width / 2) - (sky.x + sky.width / 2));
+    assert.ok(dx <= 30, `the plane is ${dx.toFixed(1)} px from the centre`);
     assert.deepEqual(errors, []);
   },
 
