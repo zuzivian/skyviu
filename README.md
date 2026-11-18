@@ -3,7 +3,8 @@
 The planes you can actually see from Stanford right now, from public ADS-B data. Live at
 [sky.natwong.dev](https://sky.natwong.dev/).
 
-It also shows the Moon, the planets, a sky chart and the next planes to come into view.
+It draws your sky as a 360° horizon panorama, with the Moon, the planets and the next planes to
+come into view.
 
 ## How it works
 
@@ -19,8 +20,8 @@ Links can name a place and a plane: `?at=KSFO` (or `stanford`, `KPAO`, `KSJC`) a
 Find each name with `grep -n`. In file order:
 
 - **`<style>`**: all the CSS, with the colours as variables under `:root`.
-- **Markup (`<main>`)**: the title, `#head` and `#card` (the selected plane), the sky chart
-  (`#sky`), the place picker (`#place`), and the lists `#now` and `#next`.
+- **Markup (`<main>`)**: the title, `#head` and `#card` (the selected plane), the horizon
+  panorama (`#sky` inside `.pano`), the place picker (`#place`), and the lists `#now` and `#next`.
 - **`<script>`**: one block, in this order.
   - Constants and data: `PLACES` (the four places in `?at=`), `AIRLINES` (ICAO code to name),
     `REFRESH_MS` (10 s).
@@ -30,7 +31,8 @@ Find each name with `grep -n`. In file order:
   - Data: `load()` fetches `/api/aircraft` and cancels an older request when the place changes;
     `schedule()` starts it and repeats it every `REFRESH_MS`.
   - Drawing: `render()` runs `renderStatus`, `renderChart`, `renderHead`, `renderCard`,
-    `renderNow` and `renderNext`. `renderChart()` draws the sky chart.
+    `renderNow` and `renderNext`. `renderChart()` draws the horizon panorama, using the pure
+    `panoX()`/`panoY()` mapping from bearing and elevation.
   - Setup at the bottom: `setObserver()` switches place and starts loading, then the 1-second
     tick, then the `?at=` and `?plane=` link handling.
 
